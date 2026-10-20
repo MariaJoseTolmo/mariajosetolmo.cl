@@ -64,6 +64,27 @@ Ante CUALQUIER alerta de presupuesto, la usuaria elige una:
 
 Fuentes: LDG `web-functions-scaling.html` (rateLimit 0 -> 503 `Platform.EndpointDisabled`), ayuda local `aws lambda-web update-web-function-endpoint` (`--throttle-config`).
 
+## Mediciones (tareas 6.x)
+
+Todas leen la URL desde variables de entorno y solo imprimen números y PASS/FAIL (nunca URLs ni IPs completas):
+
+```bash
+export SPIKE_URL=<url de la distribución>          # sin /api final
+export SPIKE_ENDPOINT_URL=<url directa del endpoint>  # solo para `direct`
+node scripts/measure.mjs echo|cookies|headers|direct|cold   # n=3 por defecto (--n N)
+node scripts/measure.mjs latency --n 50                     # Q6: p50/p95, excluye frío y 2 calentamientos
+FUNCTION_NAME=<fn> ENDPOINT_NAME=<ep> bash scripts/q7-poll.sh   # Q7: cada 5 min hasta 60 min
+```
+
+`direct` es también el test de humo de 403 tras cada deploy. Localmente (`AWS_LAMBDA_HTTP_ENDPOINT=127.0.0.1:3000 npm run dev`) corre todo salvo `headers` y `direct`: `headers` necesita CloudFront (no hay `CloudFront-Viewer-Address` local) y `direct` da FAIL esperado (no hay OAC). Código de salida: 0 PASS, 1 FAIL, 2 error de uso o de red (solo imprime `error: <código>`).
+
+`headers` (Q3) necesita tu IP pública. Si defines `MY_IP=<tu IP>` no sale ninguna llamada extra; si no, el script hace UNA solicitud a `https://checkip.amazonaws.com` (servicio de AWS, sin autenticación) para obtenerla, y nunca la imprime. Si checkip devuelve IPv4 y CloudFront te ve por IPv6 (o al revés), Q3 queda `INCONCLUSIVE` (`matches=unknown`): define `MY_IP` con la dirección de la misma familia.
+
+## Riesgos conocidos del despliegue
+
+- **Cuentas nuevas y CloudFront:** un primer deploy puede fallar en `AWS::CloudFront::Distribution` con "Your account must be verified before you can add new CloudFront resources" (403). Se resuelve con un caso en AWS Support; mientras tanto el web stack no se crea.
+- **Stack en `ROLLBACK_COMPLETE`:** CloudFormation no permite actualizar un stack cuyo primer create falló. CONFIRMADO: el `deployStack` del CLI `aws-cdk` elimina un stack en `ROLLBACK_COMPLETE` o `ROLLBACK_FAILED` antes de recrearlo (método por defecto de change set; solo se registra a nivel debug). Fuente: `lib/index.js` de `aws-cdk` 2.1146.0 instalado. No hace falta borrarlo a mano.
+
 ## Escaneo de secretos (tarea 1.4)
 
 Repo público: nada de IDs de cuenta, ARNs, hostnames reales de CloudFront/endpoint, IPs, correos ni `.env*`. Correr antes de cada commit, desde la raíz del repo:
