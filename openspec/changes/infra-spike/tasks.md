@@ -12,8 +12,8 @@ Trazabilidad: cada tarea cita el requisito (R1–R14) de `specs/infra-spike-evid
 
 ## Fase 0: Prerrequisitos (acciones de la usuaria) y verificación de NO VERIFICADOS
 
-- [ ] 0.1 (USUARIA) Confirmar perfil de credenciales de AWS para CDK y exportar `AWS_PROFILE` / `CDK_DEFAULT_ACCOUNT` localmente (no commitear). Dependencia de todo el despliegue. (R10)
-- [ ] 0.2 (USUARIA) Ejecutar `cdk bootstrap aws://<account>/us-east-1`. Anotar si el bucket de bootstrap tiene versionado (NO VERIFICADO; informativo, el diseño ya usa un bucket propio). (R10)
+- [x] 0.1 (USUARIA) Confirmar perfil de credenciales de AWS para CDK y exportar `AWS_PROFILE` / `CDK_DEFAULT_ACCOUNT` localmente (no commitear). Dependencia de todo el despliegue. (R10) HECHO: perfil configurado (usuario IAM, no root).
+- [x] 0.2 (USUARIA) Ejecutar `cdk bootstrap aws://<account>/us-east-1`. Anotar si el bucket de bootstrap tiene versionado (NO VERIFICADO; informativo, el diseño ya usa un bucket propio). (R10) HECHO: bootstrap exitoso en us-east-1.
 - [x] 0.3 Verificar contra la documentación oficial de AWS, ANTES de escribir el código que depende de cada ítem, y anotar la fuente y el resultado en una sección "Verificaciones" al inicio de `spikes/web-functions/README.md` (sin datos de cuenta):
   - [x] 0.3.1 Convención de entrypoint/comando de inicio de la Web Function dentro del zip (runtimes).
   - [x] 0.3.2 Nombre del campo de versión del objeto S3 en la revisión, capitalización de `maxConcurrencyPerEnvironment` y principal de confianza del rol de ejecución.
@@ -69,9 +69,10 @@ Trazabilidad: cada tarea cita el requisito (R1–R14) de `specs/infra-spike-evid
 
 ## Fase 5: Despliegue con compuertas (secuencial, cada paso requiere confirmación)
 
-- [ ] 5.1 **[G1]** STOP. Mostrar `cdk diff` de `SpikeCodeStack` y esperar confirmación. Luego `cdk deploy SpikeCodeStack`. (R10)
-- [ ] 5.2 **[G2]** STOP. Confirmación explícita. Ejecutar `scripts/build.mjs` y `scripts/upload.sh`; anotar `VersionId` localmente (no commitear). (R10)
+- [x] 5.1 **[G1]** STOP. Mostrar `cdk diff` de `SpikeCodeStack` y esperar confirmación. Luego `cdk deploy SpikeCodeStack`. (R10)
+- [x] 5.2 **[G2]** STOP. Confirmación explícita. Ejecutar `scripts/build.mjs` y `scripts/upload.sh`; anotar `VersionId` localmente (no commitear). (R10) HECHO: zip construido y subido (sin registrar clave/VersionId/bucket aquí).
 - [ ] 5.3 **[G3]** STOP. Mostrar `cdk diff` de `SpikeWebStack` y esperar confirmación. Luego `cdk deploy SpikeWebStack -c codeKey=... -c codeVersion=... -c alertEmail=...`. (R10)
+  - BLOQUEADA (2026-10-20): el create de `SpikeWebStack` falló en `AWS::CloudFront::Distribution`: "Your account must be verified before you can add new CloudFront resources" (403, restricción de cuenta nueva). La usuaria abrió un caso en AWS Support. Señal positiva para Q8: CloudFormation aceptó crear el change set con `AWS::Lambda::WebFunction*` y `AWS::Lambda::ResourcePolicy` (aún no es un create en vivo). El stack queda en `ROLLBACK_COMPLETE`; CONFIRMADO en el código del CLI que el siguiente `cdk deploy` lo elimina antes de recrearlo (ver README). Retomar 5.3 con nueva confirmación cuando AWS verifique la cuenta.
 - [ ] 5.4 **[G4]** Solo si la vía de la policy es script: STOP, confirmación y ejecutar `put-resource-policy`. (R8, R10)
 - [ ] 5.5 Ejecutar el test de humo de 403 directo (4.7) tras cada deploy si aplica. (R8)
 - [ ] 5.6 (USUARIA) Confirmar que llegó el correo de suscripción/alertas del presupuesto. (R9)
@@ -79,8 +80,8 @@ Trazabilidad: cada tarea cita el requisito (R1–R14) de `specs/infra-spike-evid
 
 ## Fase 6: Mediciones desde Chile (máquina de la usuaria)
 
-- [ ] 6.1 `scripts/measure.mjs`: ejecutor para `echo`, `headers`, `latency --n 50` (curl o equivalente, secuencial, p50/p95, excluye frío y 2 calentamientos). Parametrizado por variable de entorno; no imprime dominios ni IPs completas. (R6)
-- [ ] 6.2 `scripts/q7-poll.sh`: sondeo cada 5 min de CloudWatch hasta 60 min. Métrica `EndpointActiveEnvironments`, namespace `AWS/Lambda/Web/Usage`, dimensiones `FunctionName`, `EndpointName`, `ExecutionRegion`, estadística `Maximum`; apoyo: `EndpointRequestThrottles` (Sum). Sin datapoints en el período = 0 entornos (VERIFICADO docs, README 0.3.8). (R7)
+- [x] 6.1 `scripts/measure.mjs`: ejecutor para `echo`, `headers`, `latency --n 50` (curl o equivalente, secuencial, p50/p95, excluye frío y 2 calentamientos). Parametrizado por variable de entorno; no imprime dominios ni IPs completas. (R6) HECHO: Node `.mjs` sin dependencias (`echo|cookies|headers|direct|cold|latency`); probado solo en local (`headers` no: usa `MY_IP` o checkip externo).
+- [x] 6.2 `scripts/q7-poll.sh`: sondeo cada 5 min de CloudWatch hasta 60 min. Métrica `EndpointActiveEnvironments`, namespace `AWS/Lambda/Web/Usage`, dimensiones `FunctionName`, `EndpointName`, `ExecutionRegion`, estadística `Maximum`; apoyo: `EndpointRequestThrottles` (Sum). Sin datapoints en el período = 0 entornos (VERIFICADO docs, README 0.3.8). (R7) HECHO: escrito, solo `bash -n`; la usuaria lo corre.
 - [ ] 6.3 **Q1**: `measure.mjs echo` (POST JSON sin `x-amz-content-sha256`), n=3. PASS = 2xx + eco. La docs predice éxito (CloudFront firma con `UNSIGNED-PAYLOAD`); es una predicción, el resultado es la medición. (R1)
 - [ ] 6.4 **Q2**: Chrome: `/api/cookies/set` → `/api/cookies/echo`, atributos en DevTools; `curl -i` para contar encabezados. PASS = todas las cookies almacenadas y reenviadas. (R2)
 - [ ] 6.5 Reconfirmar en vivo namespace/dimensiones con `aws cloudwatch list-metrics --namespace AWS/Lambda/Web/Usage --metric-name EndpointActiveEnvironments` (requiere al menos una solicitud previa; sin tráfico no hay métrica). (R7)
@@ -94,7 +95,7 @@ Trazabilidad: cada tarea cita el requisito (R1–R14) de `specs/infra-spike-evid
 
 ## Fase 7: Evidencia, decisión y desmontaje
 
-- [ ] 7.1 Crear `openspec/changes/infra-spike/results.md` en español con columnas `# | value | n | PASS/FAIL | date (UTC) | notes` para Q1–Q8; IPs, dominios, ARNs e IDs de cuenta redactados. Incluir el inventario de Q8 y la deuda si aplica. (R12, R13)
+- [ ] 7.1 (esqueleto creado; faltan valores) Crear `openspec/changes/infra-spike/results.md` en español con columnas `# | value | n | PASS/FAIL | date (UTC) | notes` para Q1–Q8; IPs, dominios, ARNs e IDs de cuenta redactados. Incluir el inventario de Q8 y la deuda si aplica. (R12, R13)
 - [ ] 7.2 Aplicar la regla de go/no-go y escribir la decisión explícita (GO 5c / Plan B / reconsiderar sa-east-1) citando la regla. Si Q6 cayó en 300–400 ms, registrar la decisión de la usuaria. Verificar que ninguna Q quede sin valor y fecha. (R12)
 - [ ] 7.3 Listar insumos de ADR para `stack-adrs` (runtime Q5–Q7, OAC Q1–Q4, CDK Q8, región Q6). No promover la spec a `openspec/specs/`. (R12)
 - [ ] 7.4 Escaneo de secretos final sobre `results.md` y todo lo staged; cero coincidencias. (R13)
