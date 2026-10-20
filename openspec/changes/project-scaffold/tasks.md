@@ -56,16 +56,16 @@ Reglas transversales: no tocar `spikes/`; shell solo con `rg/bat/fd/sd/eza`; com
 
 ## PR 3: Swagger, documentación y strict TDD
 
-- [ ] 3.1 Resolver NO VERIFICADO: `npm view @nestjs/swagger version peerDependencies`; fijar versión exacta.
-- [ ] 3.2 RED: `apps/api/test/docs.e2e-spec.ts`: `GET /api/docs` 200 `text/html`; `GET /api/docs-json` 200 con ruta `/api/health` método `get`. Ver que falla.
-- [ ] 3.3 GREEN: `health-response.dto.ts` (`@ApiProperty({ enum })`, `HealthCheckDto`), decoradores `@ApiTags('health')` y `@ApiOkResponse` en `health.controller.ts`, y `SwaggerModule.setup('api/docs', ...)` en `bootstrap/configure-app.ts`. Swagger siempre activo, también en producción.
-- [ ] 3.4 `README.md`: setup, scripts, sección "Por qué esta tecnología" (una línea por pieza), nota de licencia de Redis 8, Mailpit/Kafka solo desarrollo.
-- [ ] 3.5 `openspec/config.yaml`: `strict_tdd: true`, `runner`, `layers`, `coverage`, `quality`, `rules.apply.tdd: true`, `test_command: "npm test && npm run test:e2e"`, `rules.verify` (`build_command`, `coverage_threshold: 80`), actualizar `context`, eliminar `strict_tdd_note` (activación en el último PR).
-- [ ] 3.6 Verificar: `npm ci && npm run lint && npm run lint:boundaries && npm run format:check && npm run typecheck && npm test && npm run test:e2e && npm run build` en verde.
-- [ ] 3.7 Cierre del PR: medir líneas (<= 400); escaneo de secretos con código de salida 0; revisión de contexto fresco; commits convencionales sin atribución de IA; PR solo con el OK de la usuaria.
+- [x] 3.1 Resolver NO VERIFICADO: `npm view @nestjs/swagger version peerDependencies`; fijar versión exacta. **Resultado:** `@nestjs/swagger` 12.0.2 (peers: `@nestjs/common`/`core` ^12, `typescript` ^5.5 || ^6; `class-validator`, `class-transformer`, `@fastify/static` opcionales), fijado exacto.
+- [x] 3.2 RED: `apps/api/test/docs.e2e-spec.ts`: `GET /api/docs` 200 `text/html`; `GET /api/docs-json` 200 con ruta `/api/health` método `get`. Ver que falla. **Resultado:** RED con 2 fallos (404); tras 3.3, GREEN.
+- [x] 3.3 GREEN: `health-response.dto.ts` (`@ApiProperty({ enum })`, `HealthCheckDto`), decoradores `@ApiTags('health')` y `@ApiOkResponse` en `health.controller.ts`, y `SwaggerModule.setup('api/docs', ...)` en `bootstrap/configure-app.ts`. Swagger siempre activo, también en producción.
+- [x] 3.4 `README.md`: setup, scripts, sección "Por qué esta tecnología" (una línea por pieza), nota de licencia de Redis 8, Mailpit/Kafka solo desarrollo.
+- [x] 3.5 `openspec/config.yaml`: `strict_tdd: true`, `runner`, `layers`, `coverage`, `quality`, `rules.apply.tdd: true`, `test_command: "npm test && npm run test:e2e"`, `rules.verify` (`build_command`, `coverage_threshold: 80`), actualizar `context`, eliminar `strict_tdd_note` (activación en el último PR).
+- [x] 3.6 Verificar: `npm ci && npm run lint && npm run lint:boundaries && npm run format:check && npm run typecheck && npm test && npm run test:e2e && npm run build` en verde.
+- [ ] 3.7 Cierre del PR: medir líneas (<= 400); escaneo de secretos con código de salida 0; revisión de contexto fresco; commits convencionales sin atribución de IA; PR solo con el OK de la usuaria. **Parcial:** ~215 líneas sin lockfile (README 80), escaneos en 0; faltan revisión, commits, PR.
 - [ ] 3.8 Posterior al merge, tarea del ORQUESTADOR: re-ejecutar `sdd-init` para actualizar `sdd-init/web_cv`.
 - [ ] 3.9 Posterior al merge, con CONFIRMACIÓN de la usuaria y con `ci.yml` ya en `main`: agregar `quality` y `secrets` como checks requeridos al ruleset `protect-main` (id 25500582) vía `gh api` (PUT del ruleset); verificar con `gh api repos/<owner>/<repo>/rulesets/25500582`.
-- [ ] 3.10 Proponer ajuste de la spec `dev-environment` (comando `gitleaks git --pre-commit --staged`, `engines >=24.15.0`) y cerrar las preguntas abiertas del diseño.
+- [x] 3.10 Proponer ajuste de la spec `dev-environment` (comando `gitleaks git --pre-commit --staged`, `engines >=24.15.0`) y cerrar las preguntas abiertas del diseño.
 
 ## Orden e interdependencias
 
