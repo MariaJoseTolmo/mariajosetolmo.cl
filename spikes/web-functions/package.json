@@ -1,0 +1,27 @@
+{
+  "name": "web-functions-spike",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Throwaway spike: Lambda Web Function + CloudFront OAC",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "tsx app/src/main.ts",
+    "synth": "CDK_OUTDIR=cdk.out CDK_CONTEXT_JSON='{\"codeKey\":\"app-dummy.zip\",\"codeVersion\":\"dummy\",\"alertEmail\":\"nobody@example.invalid\"}' tsx bin/app.ts"
+  },
+  "dependencies": {
+    "@nestjs/common": "12.2.0",
+    "@nestjs/core": "12.2.0",
+    "@nestjs/platform-express": "12.2.0",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "24.0.0",
+    "aws-cdk": "2.1146.0",
+    "aws-cdk-lib": "2.274.0",
+    "constructs": "10.8.1",
+    "esbuild": "0.28.2",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  }
+}

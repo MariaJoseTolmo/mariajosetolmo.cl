@@ -55,8 +55,10 @@ Ante CUALQUIER alerta de presupuesto, la usuaria elige una:
 - **(b) Desmontar todo**:
 
   ```bash
-  cdk destroy --all
+  cdk destroy --all -c codeKey=x -c codeVersion=x -c alertEmail=x
   ```
+
+  Los `-c` son obligatorios: la app exige esos valores de contexto incluso para destruir (cualquier valor sirve).
 
   Después, verificar restos: `aws s3api list-object-versions` vacío, log groups `/aws/lambda/web/<function-name>` y `.local` eliminados a mano, presupuesto inexistente y distribución eliminada. El stack de bootstrap permanece.
 
@@ -86,4 +88,36 @@ gitleaks **no está instalado** en esta máquina (verificado con `which gitleaks
 
 ## Inicio rápido
 
-Las fases 2–4 (app NestJS, build, CDK) se agregan en el siguiente commit. Esta carpeta es aislada: tendrá su propio `package.json` y no comparte dependencias con el resto del repo.
+Carpeta aislada: `package.json` propio, sin dependencias compartidas con el resto del repo.
+
+```bash
+cd spikes/web-functions
+npm install
+npm run dev            # smoke local en localhost:3000 (prefijo /api)
+npm run build          # dist/index.js + dist/app-<sha256>.zip (index.js en la raíz)
+```
+
+Endpoints de prueba: `GET /api/health`, `POST /api/echo`, `GET /api/cookies/set`, `GET /api/cookies/echo`, `GET /api/headers`.
+
+### Infraestructura (CDK, dos stacks en us-east-1)
+
+El correo de las alertas del presupuesto NO se commitea: se pasa por contexto de CDK. La cuenta sale de `CDK_DEFAULT_ACCOUNT` (si no está definida, el synth es agnóstico de cuenta).
+
+```bash
+# Solo synth, sin credenciales: ejecutar la app directamente evita que el CLI de cdk resuelva la cuenta (llama a STS)
+CDK_OUTDIR=cdk.out \
+CDK_CONTEXT_JSON='{"codeKey":"app-dummy.zip","codeVersion":"dummy","alertEmail":"nobody@example.invalid"}' \
+npx tsx bin/app.ts
+```
+
+Para un deploy real (solo tras la confirmación de cada compuerta [G], ver `tasks.md`): `cdk deploy SpikeCodeStack`, luego `CODE_BUCKET=<bucket> bash scripts/upload.sh` (imprime `codeKey` y `codeVersion`), luego `cdk deploy SpikeWebStack -c codeKey=... -c codeVersion=... -c alertEmail=<tu correo>`. El `cdk` CLI usa las credenciales del perfil activo.
+
+`SpikeWebStack` depende de `SpikeCodeStack`: `cdk destroy --all -c codeKey=x -c codeVersion=x -c alertEmail=x` destruye primero el web stack.
+
+### Hecho adicional verificado durante la Fase 4
+
+La resource policy de CloudFront usa la acción `lambda:InvokeWebFunctionEndpoint`, principal `cloudfront.amazonaws.com`, `Resource` = ARN del endpoint (`.../web-function/<name>/endpoint/<endpoint>`) y condición `StringEquals` sobre `aws:SourceArn` = ARN de la distribución. Se adjunta a la función (`ResourceArn` = ARN sin calificar). Fuente: `AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-lambda-web.html`. Además, valores de `EndpointType` (`HomeRegion`) y `AuthType` (`IamAuth`) según ayuda local de `aws lambda-web`, y `RuntimeConfig.Runtime` es obligatorio en la revisión.
+
+### Advertencias conocidas del synth
+
+El validador de plantillas de CDK (`CloudFormation Validate`) marca como "tipo desconocido" a `AWS::Lambda::WebFunction*` y rechaza el patrón de `ResourceArn` de `AWS::Lambda::ResourcePolicy` para `web-function/...`: su esquema local está desactualizado respecto de la documentación. No bloquea el synth; la disponibilidad real se confirma en el primer deploy (si falla, respaldo de 4.5: `AwsCustomResource` y luego script).
