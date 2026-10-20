@@ -79,10 +79,10 @@ El repo MUST incluir `.githooks/pre-commit` que ejecute `gitleaks git --pre-comm
 
 ### Requirement: Compuerta de smoke test
 
-La primera tarea de implementación MUST ser un smoke test que demuestre que Jest 30 + ts-jest cargan Nest 12 en Node 24.x. Si el smoke test falla, la implementación MUST detenerse y consultar a la usuaria. El sistema MUST NOT cambiar a Vitest sin ADR y aprobación explícita.
+La primera tarea de implementación MUST ser un smoke test que demuestre que Jest 30 + ts-jest cargan Nest 12 en Node 24.x, con los scripts de Jest ejecutados con `--experimental-vm-modules` (solo ellos; build, dev y runtime no lo usan). Si el smoke test falla, la implementación MUST detenerse y consultar a la usuaria. El sistema MUST NOT cambiar a Vitest sin ADR y aprobación explícita.
 
 #### Scenario: Smoke test exitoso
-- GIVEN Node >= 24.15.0 con Jest 30, ts-jest y `@nestjs/core` 12
+- GIVEN Node >= 24.15.0 con Jest 30, ts-jest y `@nestjs/core` 12, ejecutados con `--experimental-vm-modules`
 - WHEN un test importa `@nestjs/core` y crea un módulo mínimo con `Test.createTestingModule`
 - THEN el test pasa y se continúa con el resto del plan
 
