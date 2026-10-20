@@ -39,7 +39,7 @@ Reglas:
 | Secretos | AWS SSM Parameter Store (SecureString) | Llaves fuera del repo, sin costo | Nueva (ADR) |
 | Infraestructura | Infraestructura como código en TypeScript (ver pendiente 2) | Entorno reproducible y versionado | Nueva (ADR) |
 | CI/CD | GitHub Actions con OIDC hacia AWS | Despliegue sin llaves de AWS guardadas | En producción |
-| Docs API | Swagger en `/api-docs` | Según el diseño | En producción |
+| Docs API | Swagger en `/api/docs` (bajo el prefijo `/api`, así CloudFront lo enruta sin un behavior extra) | Según el diseño | En producción |
 | Tests | Jest (unitarios y de integración) + E2E del flujo de login | Según el diseño | En producción |
 | Local | docker-compose: Postgres, Redis, Kafka, Mailpit | Desarrollo sin depender de la nube | Docker en producción |
 
