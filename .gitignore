@@ -9,3 +9,7 @@ dist/
 
 # Local AI tooling config (contains local paths)
 .atl/
+
+# Keep the documented example, ignore real env files
+!.env.example
+coverage/

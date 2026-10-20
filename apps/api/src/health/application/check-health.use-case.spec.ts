@@ -2,7 +2,7 @@ import { CheckHealth } from './check-health.use-case';
 import { HealthProbe } from './ports/health-probe.port';
 
 const probe = (name: string, status: 'ok' | 'down'): HealthProbe => ({
-  check: async () => ({ name, status }),
+  check: () => Promise.resolve({ name, status }),
 });
 const failing = (): HealthProbe => ({
   check: () => Promise.reject(new Error('boom')),

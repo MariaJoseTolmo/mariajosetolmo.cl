@@ -4,7 +4,7 @@ import { HealthProbe } from '../../application/ports/health-probe.port';
 
 @Injectable()
 export class ProcessProbe implements HealthProbe {
-  async check(): Promise<CheckResult> {
-    return { name: 'process', status: 'ok' };
+  check(): Promise<CheckResult> {
+    return Promise.resolve({ name: 'process', status: 'ok' });
   }
 }

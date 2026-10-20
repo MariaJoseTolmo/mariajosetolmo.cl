@@ -1,0 +1,37 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      # TypeScript 7 needs a deliberate migration (typescript-eslint, ts-jest).
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+    groups:
+      nestjs:
+        patterns: ['@nestjs/*']
+      lint:
+        patterns:
+          [
+            'eslint',
+            '@eslint/*',
+            'typescript-eslint',
+            'eslint-config-prettier',
+            'globals',
+            'prettier',
+          ]
+      jest:
+        patterns:
+          ['jest', 'ts-jest', '@types/jest', 'supertest', '@types/supertest']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  # Updates tag and digest of the images in docker-compose.yml together.
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
