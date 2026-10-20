@@ -23,7 +23,7 @@ Monorepo npm con `apps/api` (NestJS 12, CommonJS, `tsc`), slice `health` hexagon
 | D6 | Hook sin gitleaks | El hook **falla cerrado** (`exit 1` con instrucción de instalación). `prepare` **nunca falla** (`\|\| true`) | Solo avisar | Requisito de seguridad del brief y de la spec. `prepare` no debe romper `npm ci` en entornos sin `.git`. El hook llega en el PR 2: la usuaria debe ejecutar `brew install gitleaks` antes de aplicarlo |
 | D7 | Política de versiones | Versiones exactas (sin `^`), las actualiza Dependabot | Rangos con caret | Builds reproducibles. Sigue el estilo del spike |
 | D1b | Flag de Jest (decisión de la usuaria, smoke 1.1) | Jest 30 + ts-jest + CommonJS, con `NODE_OPTIONS=--experimental-vm-modules jest` solo en `test`, `test:cov` y `test:e2e` (no depende de que npm eleve `jest` a la raíz; `require.resolve` está bloqueado por el `exports` de Jest) | Vitest; `nodenext`; ruta fija `../../node_modules/jest/bin/jest.js` (se rompe si `jest` no se eleva) | Jest necesita `vm.SourceTextModule` para cargar `@nestjs/*` 12 (solo ESM) con `require(esm)`; el tsconfig no lo resuelve. Build, dev y runtime siguen sin flag |
-| D8 | Imágenes de compose | `nombre:tag-exacto@sha256:<digest>`, ecosistema `docker` en Dependabot | Solo tag | Una imagen inmutable. Dependabot actualiza tag y digest juntos |
+| D8 | Imágenes de compose | `nombre:tag-exacto@sha256:<digest>`, ecosistema `docker-compose` en Dependabot (el ecosistema `docker` no lee `docker-compose.yml`) | Solo tag | Una imagen inmutable. Dependabot actualiza tag y digest juntos |
 
 ## 2. Árbol de archivos y PRs
 
