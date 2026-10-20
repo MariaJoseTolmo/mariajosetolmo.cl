@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Inicio · María José Tolmo</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+html{scrollbar-width:none}
+html::-webkit-scrollbar,body::-webkit-scrollbar{display:none}
+body{margin:0;background:#F5F4FA;overflow-x:hidden;scrollbar-width:none}
+a{color:#6D5BDF}a:hover{color:#5546C2}
+.nav-toggle,.nav-panel{display:none !important}
+@container (max-width: 760px){
+.nav-links{display:none !important}
+.nav-toggle{display:inline-flex !important}
+.nav-panel{display:flex !important}
+.hero{padding-top:48px !important;padding-bottom:64px !important;gap:40px !important}
+.arrow{flex-basis:100% !important;justify-content:center !important}
+.arrow-g{transform:rotate(90deg)}
+}
+</style>
+</helmet>
+<div style="font-family: 'IBM Plex Sans', sans-serif; color: #15132B; background: #F5F4FA; min-height: 100vh; container-type: inline-size">
+
+<header style="border-bottom: 1px solid #DEDCEB; background: #F5F4FA">
+<nav aria-label="Principal" style="max-width: 1200px; margin: 0 auto; padding: 18px 24px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
+<a href="Main.dc.html" style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 500; color: #15132B; text-decoration: none">mariajosetolmo<span style="color: {{accent}}">.cl</span></a>
+<div class="nav-links" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 28px; font-size: 15px">
+<a href="Experiencia.dc.html" style="color: #15132B; text-decoration: none">Experiencia</a>
+<a href="#proyectos" style="color: #15132B; text-decoration: none">Proyectos</a>
+<a href="#stack" style="color: #15132B; text-decoration: none">Stack</a>
+<a href="#como" style="color: #15132B; text-decoration: none">Cómo está hecha</a>
+<a href="Login.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 8px; background: {{accent}}; color: #FFFFFF; text-decoration: none; font-weight: 600">Acceso reclutadores</a>
+</div>
+<button type="button" class="nav-toggle" onClick="{{ toggleMenu }}" aria-expanded="{{ menuExpanded }}" aria-label="{{ menuLabel }}" style="align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid #DEDCEB; border-radius: 8px; background: #FFFFFF; color: #15132B; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></button>
+</nav>
+<sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+<div class="nav-panel" style="flex-direction: column; gap: 4px; padding: 4px 24px 20px; border-top: 1px solid #DEDCEB">
+<a href="Experiencia.dc.html" style="display: flex; align-items: center; min-height: 48px; font-size: 17px; color: #15132B; text-decoration: none; border-bottom: 1px solid #DEDCEB">Experiencia</a>
+<a href="#proyectos" onClick="{{ closeMenu }}" style="display: flex; align-items: center; min-height: 48px; font-size: 17px; color: #15132B; text-decoration: none; border-bottom: 1px solid #DEDCEB">Proyectos</a>
+<a href="#stack" onClick="{{ closeMenu }}" style="display: flex; align-items: center; min-height: 48px; font-size: 17px; color: #15132B; text-decoration: none; border-bottom: 1px solid #DEDCEB">Stack</a>
+<a href="#como" onClick="{{ closeMenu }}" style="display: flex; align-items: center; min-height: 48px; font-size: 17px; color: #15132B; text-decoration: none">Cómo está hecha</a>
+<a href="Login.dc.html" style="display: flex; align-items: center; justify-content: center; min-height: 48px; margin-top: 8px; border-radius: 8px; background: {{accent}}; color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 16px">Acceso reclutadores</a>
+</div>
+</sc-if>
+</header>
+
+<main>
+<section class="hero" style="max-width: 1200px; margin: 0 auto; padding: 88px 24px 96px; display: flex; flex-wrap: wrap; gap: 56px; align-items: center">
+<div style="flex: 1 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 24px">
+<p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #5A5675; letter-spacing: 0.02em">Desarrolladora Backend · Node.js / NestJS · Santiago, Chile</p>
+<h1 style="margin: 0; font-size: clamp(40px, 5vw, 64px); line-height: 1.05; font-weight: 700; letter-spacing: -0.02em">Microservicios con NestJS para banca y minería.</h1>
+<p style="margin: 0; font-size: 19px; line-height: 1.55; color: #3A3654; max-width: 560px">María José Tolmo. Más de 3 años construyendo APIs REST con arquitectura hexagonal, datos cifrados y despliegue continuo a producción. Antes, 17 años modelando sistemas complejos como coordinadora BIM.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; padding-top: 8px">
+<a href="Login.dc.html" style="display: inline-flex; align-items: center; min-height: 48px; padding: 0 22px; border-radius: 8px; background: {{accent}}; color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 16px">Solicitar CV completo</a>
+<a href="Experiencia.dc.html" style="display: inline-flex; align-items: center; min-height: 48px; padding: 0 22px; border-radius: 8px; border: 1px solid #15132B; color: #15132B; text-decoration: none; font-weight: 600; font-size: 16px">Ver experiencia</a>
+</div>
+</div>
+
+<figure style="flex: 1 1 440px; min-width: 0; margin: 0; background: #15132B; border-radius: 12px; overflow: hidden">
+<figcaption style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 14px 20px; border-bottom: 1px solid #2B2847; font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #A9A5C4">
+<span><span style="color: #9EDF81">GET</span> /api/v1/profile</span>
+<span style="color: #9EDF81">200 OK</span>
+</figcaption>
+<pre style="margin: 0; padding: 22px 20px 26px; font-family: 'IBM Plex Mono', monospace; font-size: 14.5px; line-height: 1.7; color: #ECEAF7; white-space: pre-wrap; overflow-x: auto">{
+  <span style="color: #9EDF81">"name"</span>: <span style="color: #C9C1FF">"María José Tolmo"</span>,
+  <span style="color: #9EDF81">"role"</span>: <span style="color: #C9C1FF">"Backend Developer"</span>,
+  <span style="color: #9EDF81">"stack"</span>: [<span style="color: #C9C1FF">"Node.js"</span>, <span style="color: #C9C1FF">"NestJS"</span>, <span style="color: #C9C1FF">"TypeScript"</span>,
+            <span style="color: #C9C1FF">"PostgreSQL"</span>, <span style="color: #C9C1FF">"Redis"</span>, <span style="color: #C9C1FF">"Kafka"</span>],
+  <span style="color: #9EDF81">"architecture"</span>: <span style="color: #C9C1FF">"hexagonal"</span>,
+  <span style="color: #9EDF81">"domains"</span>: [<span style="color: #C9C1FF">"banca"</span>, <span style="color: #C9C1FF">"minería"</span>],
+  <span style="color: #9EDF81">"workflow"</span>: <span style="color: #C9C1FF">"spec-driven + Claude Code"</span>,
+  <span style="color: #9EDF81">"openToWork"</span>: <span style="color: #FFFFFF">true</span>
+}</pre>
+</figure>
+</section>
+
+<section aria-labelledby="aporte" style="background: #FFFFFF; border-top: 1px solid #DEDCEB; border-bottom: 1px solid #DEDCEB">
+<div style="max-width: 1200px; margin: 0 auto; padding: 88px 24px; display: flex; flex-direction: column; gap: 40px">
+<div style="display: flex; flex-direction: column; gap: 12px; max-width: 720px">
+<p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: {{accent}}">01 / Lo que aporto</p>
+<h2 id="aporte" style="margin: 0; font-size: 36px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em">Experiencia en contextos donde un error cuesta caro.</h2>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px">
+<article style="border: 1px solid #DEDCEB; border-radius: 12px; padding: 28px; display: flex; flex-direction: column; gap: 14px">
+<p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #5A5675">Banca · Accenture / Itaú</p>
+<h3 style="margin: 0; font-size: 22px; font-weight: 600">APIs con datos cifrados, en producción</h3>
+<p style="margin: 0; font-size: 16px; line-height: 1.6; color: #3A3654">Microservicios en NestJS, documentación con Swagger y pipelines CI/CD hacia QA y producción. Ascenso de Trainee a Junior.</p>
+</article>
+<article style="border: 1px solid #DEDCEB; border-radius: 12px; padding: 28px; display: flex; flex-direction: column; gap: 14px">
+<p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #5A5675">Minería · Kabeli, Amecs</p>
+<h3 style="margin: 0; font-size: 22px; font-weight: 600">Migración Java → Node.js y desarrollo agéntico</h3>
+<p style="margin: 0; font-size: 16px; line-height: 1.6; color: #3A3654">Microservicios consumidores de APIs externas, Spec-Driven Development y uso intensivo de IA con Claude Code.</p>
+</article>
+<article style="border: 1px solid #DEDCEB; border-radius: 12px; padding: 28px; display: flex; flex-direction: column; gap: 14px">
+<p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #5A5675">17 años · Coordinación BIM</p>
+<h3 style="margin: 0; font-size: 22px; font-weight: 600">De modelar edificios a modelar dominios</h3>
+<p style="margin: 0; font-size: 16px; line-height: 1.6; color: #3A3654">Coordinación de disciplinas y liderazgo de equipos en proyectos complejos: la misma base que pide un sistema bien diseñado.</p>
+</article>
+</div>
+</div>
+</section>
+
+<section id="stack" aria-labelledby="stack-h" style="max-width: 1200px; margin: 0 auto; padding: 88px 24px; display: flex; flex-direction: column; gap: 40px">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: {{accent}}">02 / Stack</p>
+<h2 id="stack-h" style="margin: 0; font-size: 36px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em">Lo que uso a diario y lo que estoy sumando.</h2>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 32px 24px">
+<div style="display: flex; flex-direction: column; gap: 12px; border-top: 2px solid #15132B; padding-top: 16px">
+<h3 style="margin: 0; font-size: 15px; font-weight: 600">Avanzado</h3>
+<p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 14.5px; line-height: 1.9; color: #3A3654">JavaScript<br>Node.js<br>NestJS<br>PostgreSQL</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 12px; border-top: 2px solid #15132B; padding-top: 16px">
+<h3 style="margin: 0; font-size: 15px; font-weight: 600">En producción</h3>
+<p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 14.5px; line-height: 1.9; color: #3A3654">TypeScript · Express.js<br>Kafka · Redis · TypeORM<br>JWT · OAuth · Swagger<br>Docker · Jest · CI/CD</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 12px; border-top: 2px solid #15132B; padding-top: 16px">
+<h3 style="margin: 0; font-size: 15px; font-weight: 600">Arquitectura y prácticas</h3>
+<p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 14.5px; line-height: 1.9; color: #3A3654">Hexagonal · Microservicios<br>SOLID · Código limpio<br>Spec-Driven Development<br>Scrum · Kanban</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 12px; border-top: 2px solid #DEDCEB; padding-top: 16px">
+<h3 style="margin: 0; font-size: 15px; font-weight: 600; color: #5A5675">Aprendiendo</h3>
+<p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 14.5px; line-height: 1.9; color: #5A5675">AWS (Cloud Computing)<br>Java · Spring Boot<br>Python</p>
+</div>
+</div>
+</section>
+
+<section id="proyectos" aria-labelledby="proy-h" style="background: #FFFFFF; border-top: 1px solid #DEDCEB; border-bottom: 1px solid #DEDCEB">
+<div style="max-width: 1200px; margin: 0 auto; padding: 88px 24px; display: flex; flex-direction: column; gap: 40px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: {{accent}}">03 / Proyectos</p>
+<h2 id="proy-h" style="margin: 0; font-size: 36px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em">Casos de estudio, con decisiones explicadas.</h2>
+</div>
+<a href="https://github.com/mjosetolmo" style="font-weight: 600; font-size: 15px">github.com/mjosetolmo →</a>
+</div>
+<div style="display: flex; flex-direction: column">
+<a href="#como" style="display: flex; flex-wrap: wrap; gap: 8px 32px; align-items: baseline; padding: 24px 0; border-top: 1px solid #DEDCEB; color: #15132B; text-decoration: none">
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #5A5675; width: 120px">NestJS · Next.js</span>
+<span style="flex: 1 1 360px; font-size: 22px; font-weight: 600">Este portafolio: magic link, JWT y eventos</span>
+<span style="font-size: 15px; color: #3A3654; flex: 1 1 280px">Arquitectura hexagonal, Redis, Kafka y tests E2E del login.</span>
+</a>
+<a href="#proyectos" style="display: flex; flex-wrap: wrap; gap: 8px 32px; align-items: baseline; padding: 24px 0; border-top: 1px solid #DEDCEB; border-bottom: 1px solid #DEDCEB; color: #15132B; text-decoration: none">
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #5A5675; width: 120px">Java → Node.js</span>
+<span style="flex: 1 1 360px; font-size: 22px; font-weight: 600">Migración de microservicios (anonimizado)</span>
+<span style="font-size: 15px; color: #3A3654; flex: 1 1 280px">Estrategia de migración, contratos de API y pruebas de paridad.</span>
+</a>
+</div>
+</div>
+</section>
+
+<section id="como" aria-labelledby="como-h" style="max-width: 1200px; margin: 0 auto; padding: 88px 24px; display: flex; flex-direction: column; gap: 40px">
+<div style="display: flex; flex-direction: column; gap: 12px; max-width: 760px">
+<p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: {{accent}}">04 / Cómo está hecha esta web</p>
+<h2 id="como-h" style="margin: 0; font-size: 36px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em">El portafolio también es el código de muestra.</h2>
+<p style="margin: 0; font-size: 17px; line-height: 1.6; color: #3A3654">Sitio estático servido por CloudFront y una API NestJS propia en AWS Lambda. Puedes revisar los endpoints, el pipeline y el estado del sistema.</p>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: stretch; gap: 12px">
+<div style="flex: 1 1 200px; border: 1px solid #DEDCEB; background: #FFFFFF; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5A5675">frontend</span>
+<span style="font-size: 18px; font-weight: 600">Next.js estático</span>
+<span style="font-size: 14px; color: #3A3654">Generado en el build, en S3 + CloudFront</span>
+</div>
+<div aria-hidden="true" class="arrow" style="display: flex; align-items: center; font-family: 'IBM Plex Mono', monospace; color: #5A5675"><span class="arrow-g" style="display: inline-block">→</span></div>
+<div style="flex: 1.6 1 280px; border: 2px solid {{accent}}; background: #FFFFFF; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: {{accent}}">api</span>
+<span style="font-size: 18px; font-weight: 600">NestJS · hexagonal</span>
+<span style="font-size: 14px; color: #3A3654">En AWS Lambda. Magic link + JWT RS256, refresh rotativo, guards por rol</span>
+</div>
+<div aria-hidden="true" class="arrow" style="display: flex; align-items: center; font-family: 'IBM Plex Mono', monospace; color: #5A5675"><span class="arrow-g" style="display: inline-block">→</span></div>
+<div style="flex: 1 1 200px; border: 1px solid #DEDCEB; background: #FFFFFF; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #5A5675">datos</span>
+<span style="font-size: 18px; font-weight: 600">PostgreSQL · Redis</span>
+<span style="font-size: 14px; color: #3A3654">Contenido, sesiones, rate limit</span>
+</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 12px">
+<a href="#como" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border: 1px solid #DEDCEB; border-radius: 8px; background: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #15132B; text-decoration: none">/api-docs</a>
+<a href="#como" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border: 1px solid #DEDCEB; border-radius: 8px; background: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #15132B; text-decoration: none">/status</a>
+<a href="https://github.com/mjosetolmo" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border: 1px solid #DEDCEB; border-radius: 8px; background: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: #15132B; text-decoration: none">Repositorio</a>
+</div>
+</section>
+
+<section aria-labelledby="cta-h" style="background: #15132B; color: #ECEAF7">
+<div style="max-width: 1200px; margin: 0 auto; padding: 80px 24px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 32px">
+<div style="flex: 1 1 520px; display: flex; flex-direction: column; gap: 12px">
+<h2 id="cta-h" style="margin: 0; font-size: 34px; line-height: 1.15; font-weight: 700; color: #FFFFFF">¿Buscas una desarrolladora backend Node.js?</h2>
+<p style="margin: 0; font-size: 17px; line-height: 1.6; color: #C4C0DC">Ingresa con tu correo, sin contraseña. Accedes al CV completo, contacto directo y la API de prueba.</p>
+</div>
+<a href="Login.dc.html" style="display: inline-flex; align-items: center; min-height: 52px; padding: 0 26px; border-radius: 8px; background: #9EDF81; color: #15132B; text-decoration: none; font-weight: 600; font-size: 16px">Recibir enlace de acceso</a>
+</div>
+</section>
+</main>
+
+<footer style="max-width: 1200px; margin: 0 auto; padding: 32px 24px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; font-size: 14px; color: #5A5675">
+<span>María José Tolmo Tolmo · Desarrolladora Backend</span>
+<span style="display: flex; flex-wrap: wrap; gap: 20px">
+<a href="mailto:mariajosetolmo@gmail.com">mariajosetolmo@gmail.com</a>
+<a href="https://linkedin.com/in/mariajosetolmo">LinkedIn</a>
+<a href="https://github.com/mjosetolmo">GitHub</a>
+</span>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#6D5BDF","options":["#6D5BDF","#5546C2","#15132B"]},"$preview":{"width":1440,"height":3110}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { menu: false };
+  }
+  renderVals() {
+    const open = this.state.menu;
+    return {
+      accent: this.props.accent ?? '#6D5BDF',
+      menuOpen: open,
+      menuExpanded: open ? 'true' : 'false',
+      menuLabel: open ? 'Cerrar menú' : 'Abrir menú',
+      toggleMenu: () => this.setState({ menu: !open }),
+      closeMenu: () => this.setState({ menu: false })
+    };
+  }
+}
+</script>
+</body>
+</html>

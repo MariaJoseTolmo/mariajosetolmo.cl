@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Zona reclutador · María José Tolmo</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F5F4FA}
+a{color:#6D5BDF}a:hover{color:#5546C2}
+</style>
+</helmet>
+<div style="font-family: 'IBM Plex Sans', sans-serif; color: #15132B; background: #F5F4FA; min-height: 100vh">
+
+<header style="border-bottom: 1px solid #DEDCEB; background: #FFFFFF">
+<nav aria-label="Principal" style="max-width: 1200px; margin: 0 auto; padding: 14px 24px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
+<a href="Main.dc.html" style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 500; color: #15132B; text-decoration: none">mariajosetolmo<span style="color: {{accent}}">.cl</span></a>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px">
+<span style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid #DEDCEB; border-radius: 999px; font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: #3A3654"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: {{accent}}"></span>[correo@empresa.com] · rol RECRUITER</span>
+<a href="Login.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border: 1px solid #8F8AAE; border-radius: 8px; color: #15132B; text-decoration: none; font-size: 15px; font-weight: 600">Cerrar sesión</a>
+</div>
+</nav>
+</header>
+
+<main style="max-width: 1200px; margin: 0 auto; padding: 56px 24px 88px; display: flex; flex-direction: column; gap: 40px">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: {{accent}}">GET /recruiter · 200 OK</p>
+<h1 style="margin: 0; font-size: clamp(32px, 4vw, 46px); line-height: 1.1; font-weight: 700; letter-spacing: -0.01em">Gracias por tu interés, [Nombre].</h1>
+<p style="margin: 0; font-size: 17px; line-height: 1.6; color: #3A3654; max-width: 680px">Aquí tienes todo lo necesario para avanzar: CV, contacto directo y una API real para que veas cómo trabajo.</p>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px">
+<section aria-labelledby="cv-h" style="background: #FFFFFF; border: 1px solid #DEDCEB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 14px">
+<h2 id="cv-h" style="margin: 0; font-size: 18px; font-weight: 600">CV completo</h2>
+<p style="margin: 0; font-size: 15px; line-height: 1.55; color: #3A3654">Versión actualizada, con logros y formación.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: auto">
+<a href="#cv-h" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 8px; background: {{accent}}; color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 15px">Descargar PDF</a>
+<a href="#cv-h" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #8F8AAE; color: #15132B; text-decoration: none; font-weight: 600; font-size: 15px">Word</a>
+</div>
+</section>
+
+<section aria-labelledby="ct-h" style="background: #FFFFFF; border: 1px solid #DEDCEB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 14px">
+<h2 id="ct-h" style="margin: 0; font-size: 18px; font-weight: 600">Contacto directo</h2>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 15px">
+<li><a href="mailto:mariajosetolmo@gmail.com">mariajosetolmo@gmail.com</a></li>
+<li><a href="tel:+56974536288">+56 9 7453 6288</a></li>
+<li><a href="https://linkedin.com/in/mariajosetolmo">linkedin.com/in/mariajosetolmo</a></li>
+<li><a href="https://github.com/mjosetolmo">github.com/mjosetolmo</a></li>
+</ul>
+</section>
+
+<section aria-labelledby="disp-h" style="background: #FFFFFF; border: 1px solid #DEDCEB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 14px">
+<h2 id="disp-h" style="margin: 0; font-size: 18px; font-weight: 600">Disponibilidad</h2>
+<dl style="margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size: 15px">
+<dt style="color: #5A5675">Modalidad</dt><dd style="margin: 0">Presencial, híbrida o remota</dd>
+<dt style="color: #5A5675">Inicio</dt><dd style="margin: 0">[DISPONIBILIDAD]</dd>
+<dt style="color: #5A5675">Renta</dt><dd style="margin: 0">[PRETENSIÓN]</dd>
+</dl>
+</section>
+
+<section aria-labelledby="ag-h" style="background: #FFFFFF; border: 1px solid #DEDCEB; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 14px">
+<h2 id="ag-h" style="margin: 0; font-size: 18px; font-weight: 600">Agendar entrevista</h2>
+<p style="margin: 0; font-size: 15px; line-height: 1.55; color: #3A3654">Propón un horario y recibirás la invitación por correo.</p>
+<a href="#ag-h" style="display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; margin-top: auto; border-radius: 8px; border: 1px solid #15132B; color: #15132B; text-decoration: none; font-weight: 600; font-size: 15px">Proponer horario</a>
+</section>
+</div>
+
+<section aria-labelledby="pg-h" style="display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<p style="margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: {{accent}}">API Playground</p>
+<h2 id="pg-h" style="margin: 0; font-size: 28px; font-weight: 700">Prueba la API que alimenta este sitio</h2>
+<p style="margin: 0; font-size: 16px; line-height: 1.6; color: #3A3654">Elige un endpoint. Tu sesión ya incluye el JWT, así que también funcionan los privados.</p>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch">
+<div role="group" aria-label="Endpoints" style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{ endpoints }}" as="ep" hint-placeholder-count="4">
+<button type="button" onClick="{{ ep.pick }}" aria-pressed="{{ ep.pressed }}" style="{{ ep.btnStyle }}">
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 500; color: {{ ep.methodColor }}">{{ ep.method }}</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px; text-align: left; overflow-wrap: anywhere">{{ ep.path }}</span>
+</button>
+</sc-for>
+</div>
+<div style="flex: 2 1 480px; min-width: 0; background: #15132B; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 14px 20px; border-bottom: 1px solid #2B2847; font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #A9A5C4">
+<span><span style="color: #9EDF81">{{ current.method }}</span> {{ current.path }}</span>
+<span style="color: #9EDF81">{{ current.status }}</span>
+</div>
+<pre style="margin: 0; padding: 20px; flex: 1; font-family: 'IBM Plex Mono', monospace; font-size: 14px; line-height: 1.65; color: #ECEAF7; white-space: pre-wrap; overflow-x: auto">{{ current.body }}</pre>
+</div>
+</div>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#6D5BDF","options":["#6D5BDF","#5546C2","#15132B"]},"$preview":{"width":1440,"height":1320}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { sel: 0 };
+  }
+  renderVals() {
+    const accent = this.props.accent ?? '#6D5BDF';
+    const j = (o) => JSON.stringify(o, null, 2);
+    const data = [
+      { method: 'GET', path: '/api/v1/profile', status: '200 OK', body: j({ name: 'María José Tolmo', role: 'Backend Developer', architecture: 'hexagonal', domains: ['banca', 'minería'], openToWork: true }) },
+      { method: 'GET', path: '/api/v1/experience?limit=2', status: '200 OK', body: j({ items: [{ company: 'Kabeli', role: 'Desarrolladora Backend', highlights: ['Claude Code', 'Spec-Driven Development'] }, { company: 'Amecs', role: 'Desarrolladora Backend', highlights: ['Migración Java → Node.js', 'APIs externas'] }], next: '/api/v1/experience?cursor=2' }) },
+      { method: 'GET', path: '/api/v1/skills?level=advanced', status: '200 OK', body: j({ level: 'advanced', skills: ['JavaScript', 'Node.js', 'NestJS', 'PostgreSQL'] }) },
+      { method: 'GET', path: '/api/v1/me', status: '200 OK · JWT', body: j({ email: '[correo@empresa.com]', role: 'RECRUITER', session: { accessTokenTtl: '15m', refresh: 'rotating, 7d' } }) },
+      { method: 'GET', path: '/api/v1/admin/visits', status: '403 Forbidden', body: j({ statusCode: 403, message: 'Requiere rol ADMIN', error: 'Forbidden' }) }
+    ];
+    const sel = this.state.sel;
+    const endpoints = data.map((d, i) => {
+      const on = i === sel;
+      return {
+        ...d,
+        pressed: on ? 'true' : 'false',
+        methodColor: on ? accent : '#5A5675',
+        btnStyle: 'display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 16px; border-radius: 10px; cursor: pointer; font: inherit; color: #15132B; background: #FFFFFF; border: ' + (on ? '2px solid ' + accent : '1px solid #DEDCEB'),
+        pick: () => this.setState({ sel: i })
+      };
+    });
+    return { accent, endpoints, current: data[sel] };
+  }
+}
+</script>
+</body>
+</html>
