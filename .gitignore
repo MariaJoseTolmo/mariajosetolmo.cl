@@ -1,0 +1,11 @@
+node_modules/
+cdk.out/
+cdk.context.json
+.env*
+dist/
+*.zip
+*.log
+.DS_Store
+
+# Local AI tooling config (contains local paths)
+.atl/
