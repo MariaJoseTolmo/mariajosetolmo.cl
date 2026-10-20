@@ -1,0 +1,53 @@
+schema: spec-driven
+
+context: |
+  Project: web_cv - public portfolio (mariajosetolmo.cl); the site is itself the code sample. Source of truth: docs/brief.md.
+  Stack (planned, no code yet): Next.js static export (S3+CloudFront); NestJS hexagonal API (prefix /api) on AWS Lambda; PostgreSQL + TypeORM; Redis (Upstash/Docker); EventPublisher port (Kafka local, SQS prod).
+  Auth: magic link + JWT RS256 + rotating refresh, roles RECRUITER/ADMIN. IaC in TypeScript (SST vs CDK pending). CI/CD: GitHub Actions + OIDC.
+  Testing: planned Jest (unit/integration) + E2E of login flow; no runner installed yet.
+  Style: TypeScript strict, ESLint, conventional commits. Public repo: no personal data, no former-employer code.
+  Rule: every technology not in the CV needs an ADR under openspec/.
+
+testing:
+  strict_tdd: false
+  strict_tdd_note: "No test runner installed yet. Re-run sdd-init (or set true) once Jest is added; then default becomes true."
+  runner:
+    planned: "Jest"
+    command: ""
+  layers:
+    unit: planned (Jest)
+    integration: planned (Jest)
+    e2e: planned (login flow)
+  coverage: planned
+  quality:
+    linter: planned (ESLint)
+    type_checker: planned (tsc strict)
+    formatter: undecided
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Flag any technology absent from the CV and require an ADR
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+    - Never include personal data (phone, salary, availability) in specs or examples
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale; ADRs record problem, alternatives, choice, relation to CV
+    - Keep domain independent of Lambda/AWS (hexagonal ports and adapters)
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+    - Include Review Workload Forecast (400-line PR budget)
+  apply:
+    - Follow hexagonal layering and brief.md security requirements
+    - Conventional commits only
+    tdd: false
+    test_command: ""
+  verify:
+    test_command: ""
+    build_command: ""
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas
