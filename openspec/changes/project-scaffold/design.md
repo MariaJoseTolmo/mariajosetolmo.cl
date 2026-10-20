@@ -275,5 +275,5 @@ exec gitleaks git --pre-commit --staged --redact --no-banner
 
 ## Preguntas abiertas
 
-- [ ] Spec `dev-environment`: ¿aceptar `gitleaks git --pre-commit --staged` en lugar de `protect --staged`, y `engines` `>=24.15.0`?
+- [x] Spec `dev-environment`: ¿aceptar `gitleaks git --pre-commit --staged` en lugar de `protect --staged`, y `engines` `>=24.15.0`? **Resuelto en el PR 3:** la spec ya refleja `gitleaks git --pre-commit --staged` (confirmado con `gitleaks git --help`, v8.30.1) y `engines` `>=24.15.0 <25`; no quedan ajustes pendientes.
 - [x] ¿Swagger también en producción? Sí (decisión de la usuaria): se monta siempre en `/api/docs`; las rutas `/admin` se excluyen del documento cuando existan (cambio de auth).

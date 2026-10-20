@@ -2,27 +2,28 @@ schema: spec-driven
 
 context: |
   Project: web_cv - public portfolio (mariajosetolmo.cl); the site is itself the code sample. Source of truth: docs/brief.md.
-  Stack (planned, no code yet): Next.js static export (S3+CloudFront); NestJS hexagonal API (prefix /api) on AWS Lambda; PostgreSQL + TypeORM; Redis (Upstash/Docker); EventPublisher port (Kafka local, SQS prod).
+  Code so far: npm workspace with apps/api (NestJS 12, hexagonal health slice, Swagger at /api/docs), CI and local docker-compose. Stack (rest planned): Next.js static export (S3+CloudFront); NestJS hexagonal API (prefix /api) on AWS Lambda; PostgreSQL + TypeORM; Redis (Upstash/Docker); EventPublisher port (Kafka local, SQS prod).
   Auth: magic link + JWT RS256 + rotating refresh, roles RECRUITER/ADMIN. IaC in TypeScript (SST vs CDK pending). CI/CD: GitHub Actions + OIDC.
-  Testing: planned Jest (unit/integration) + E2E of login flow; no runner installed yet.
+  Testing: Jest 30 + ts-jest (unit) and supertest (e2e), strict TDD active; E2E of login flow planned.
   Style: TypeScript strict, ESLint, conventional commits. Public repo: no personal data, no former-employer code.
   Rule: every technology not in the CV needs an ADR under openspec/.
 
 testing:
-  strict_tdd: false
-  strict_tdd_note: "No test runner installed yet. Re-run sdd-init (or set true) once Jest is added; then default becomes true."
+  strict_tdd: true
   runner:
-    planned: "Jest"
-    command: ""
+    name: jest
+    command: "npm test"
   layers:
-    unit: planned (Jest)
-    integration: planned (Jest)
-    e2e: planned (login flow)
-  coverage: planned
+    unit: "jest (apps/api/src/**/*.spec.ts)"
+    integration: planned
+    e2e: "jest + supertest (npm run test:e2e)"
+  coverage:
+    command: "npm run test:cov"
+    threshold: 80
   quality:
-    linter: planned (ESLint)
-    type_checker: planned (tsc strict)
-    formatter: undecided
+    linter: "eslint (npm run lint)"
+    type_checker: "tsc --strict (npm run typecheck)"
+    formatter: "prettier (npm run format:check)"
 
 rules:
   proposal:
@@ -41,13 +42,14 @@ rules:
     - Keep tasks completable in one session
     - Include Review Workload Forecast (400-line PR budget)
   apply:
-    - Follow hexagonal layering and brief.md security requirements
-    - Conventional commits only
-    tdd: false
-    test_command: ""
+    conventions:
+      - Follow hexagonal layering and brief.md security requirements
+      - Conventional commits only
+    tdd: true
+    test_command: "npm test && npm run test:e2e"
   verify:
-    test_command: ""
-    build_command: ""
-    coverage_threshold: 0
+    test_command: "npm test && npm run test:e2e"
+    build_command: "npm run build"
+    coverage_threshold: 80
   archive:
     - Warn before merging destructive deltas
