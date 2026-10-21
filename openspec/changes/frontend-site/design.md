@@ -216,7 +216,8 @@ Usuario      LoginContainer      Gateway             API
 
 - El correo es obligatorio y se valida con `type="email"` y `required`. Los errores se anuncian con `aria-describedby` y una región `role="alert"`.
 - `name` y `company` vacíos no se envían (se recortan con `trim`).
-- **Captura del token (`useMagicLinkToken`):** el token viaja en el fragmento (`#token=`), que solo existe en el cliente. El hook lo lee de `window.location.hash` en un efecto tras el montaje (nunca durante el prerender), lo guarda en `useState` (memoria) y llama a `history.replaceState(null, '', '/acceso/verificar/')`, que vacía el fragmento. Ignora por completo `location.search`: un `?token=` no se lee. Toda la lectura del token está en ese hook (único archivo que la hace).
+- **Captura del token (`useMagicLinkToken`):** el token viaja en el fragmento (`#token=`), que solo existe en el cliente. El hook lo lee de `window.location.hash` en un efecto tras el montaje (nunca durante el prerender), lo guarda en `useState` (memoria) y llama a `history.replaceState(null, '', '/acceso/verificar/')`, que vacía el fragmento. Ignora por completo `location.search`: un `?token=` no se lee. Toda la lectura del token está en ese hook (único archivo que la hace; lo garantiza `token-guard.test.ts`).
+- **Enlace nuevo en la misma pestaña:** el hook también escucha `hashchange` (con limpieza al desmontar). Si llega un `#token=`, lo captura, lo borra con `replaceState` y REEMPLAZA el token en memoria; `VerifyContainer` usa el token como `key` del flujo, de modo que vuelve a la confirmación con el token nuevo sea cual sea el estado (ready, confirming, done o error) y descarta la respuesta de una confirmación pendiente del token anterior.
 - **Primer render:** el hook expone un estado `pending` hasta que el efecto corre; la vista muestra la tarjeta neutral "Cargando…" (es lo que queda prerenderizado en el HTML) y solo después decide entre `ready` o `missing-token`. No se usa `useSearchParams`, por lo que no hace falta `<Suspense>`.
 
 **Saludo** (`greeting.ts`, función pura con su test):
@@ -238,7 +239,7 @@ Usuario      LoginContainer      Gateway             API
 | Contacto directo | `src/content/site.ts` (datos públicos por decisión de la usuaria) |
 | Disponibilidad | `me.availability`, de la misma respuesta de `getMe()` que usa el guard (sin segunda petición ni segundo estado de carga). Las etiquetas son estáticas; los valores llegan solo por la API |
 
-La pill de sesión muestra `me.email · rol {me.role}`. "Cerrar sesión" llama a `logout()` y luego hace `replace` a `/acceso/`.
+La pill de sesión muestra `me.email · rol {me.role}`. "Cerrar sesión" llama a `logout()` y luego hace `replace` a `/` (decisión del dueño, 2026-10-21; reemplaza el `/acceso/` original). Una sesión ya expirada (`unauthorized`) también termina en `/`. Descargar el CV solo navega a URLs `https:`.
 
 **Playground:**
 - `endpoints.ts` es una allowlist tipada de 5 endpoints `GET`: `/api/v1/profile`, `/api/v1/experience?limit=2`, `/api/v1/skills?level=advanced`, `/api/v1/me` y `/api/v1/admin/visits` (403 esperado). `call()` solo acepta esa lista.
@@ -370,6 +371,7 @@ Total ≈ 3.930 líneas, contra unas 2.000 en la propuesta.
 | Las custom error responses afectan también a `/api/*` | Está documentado en el contrato; decide infra |
 | `me` debe devolver `company`, `name` y `availability`; los endpoints de CV y `logout` no están definidos | Dependencia con el cambio de auth; los tipos son provisionales |
 | Contraste del acento ≈ 4.56 | El test falla si baja de 4.5 |
+| Dependencia con el cambio de auth: el token MUST ser base64url (alfabeto `A-Z a-z 0-9 - _`, sin `+`, `/` ni `=`, que se corrompen o se interpretan mal en un fragmento tipo `application/x-www-form-urlencoded`), de un solo uso y con TTL corto (el copy dice 15 minutos). Límite de `replaceState`: vacía la URL de la entrada actual, pero el historial global del navegador, el autocompletado de la barra y el cliente de correo conservan la URL original con el token; es aceptable porque el token es de un solo uso y vence pronto | Un token reutilizable o de TTL largo haría insuficiente esta mitigación |
 | Dependencia con el cambio de auth: el enlace del correo MUST ser `https://mariajosetolmo.cl/acceso/verificar/#token=<token>` (fragmento, no query) | Decisión registrada en §16; `Referrer-Policy: no-referrer` sigue recomendada como defensa en profundidad |
 
 ## 16. Reconciliación spec/design (2026-10-20)
