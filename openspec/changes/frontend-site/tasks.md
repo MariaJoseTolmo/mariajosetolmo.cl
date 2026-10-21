@@ -163,21 +163,24 @@ PR 5, 6 y 7 pueden prepararse en paralelo en ramas distintas, pero se mergean en
 
 ## PR 11: Playground (~280)
 
-- [ ] 11.1 RED→GREEN: `endpoints.ts` (allowlist tipada de 5 GET) y `call()` rechaza fuera de la lista.
-- [ ] 11.2 RED→GREEN: `EndpointButton` (`aria-pressed`), `ResponseViewer` (`<pre aria-live="polite">`, método/ruta/estado/JSON).
-- [ ] 11.3 RED→GREEN: `ApiPlayground` (primer endpoint al autorizar, cambio de selección, `admin/visits` → 403 para RECRUITER); integrar en `RecruiterZone`.
+- [x] 11.1 RED→GREEN: `endpoints.ts` (allowlist tipada de 5 GET) y `call()` rechaza fuera de la lista.
+- [x] 11.2 RED→GREEN: `EndpointButton` (`aria-pressed`), `ResponseViewer` (`<pre aria-live="polite">`, método/ruta/estado/JSON).
+- [x] 11.3 RED→GREEN: `ApiPlayground` (primer endpoint al autorizar, cambio de selección, `admin/visits` → 403 para RECRUITER); integrar en `RecruiterZone`.
 - [ ] 11.4 CIERRE (`gitleaks dir apps/web/src/features/recruiter/playground`).
+  - Nota (apply F): `gitleaks dir` hecho sin hallazgos; revisión/commits/PR los cierra el orquestador. La allowlist runtime vive en `src/lib/api/playground-endpoints.ts` (no en `features/recruiter/playground/endpoints.ts` como decía design §2) porque ambos adaptadores (`http`, `mock`) deben validar y `lib` no importa de `features`; `call()` fuera de la lista devuelve `unexpected` sin hacer fetch. `ResponseViewer` reutiliza `CodeWindow`/`highlightJson`; la región viva persistente (`role="status"`) anuncia la línea de estado, no el JSON (design §8 decía `<pre aria-live>`). Guarda en vuelo: `aria-disabled` en los 5 botones mientras carga + ref síncrona. `RecruiterZone` pasa `onUnauthorized` → `/acceso/`.
 
 ## PR 12: Cierre del sitio (~380)
 
-- [ ] 12.1 Resolver NO VERIFICADO: CSP `style-src 'self'` sin `'unsafe-inline'` (probar en navegador; documentar si falla).
-- [ ] 12.2 RED→GREEN: `sitemap.ts` (exactamente `/`, `/experiencia/`, `/acceso/`; sin `/reclutador/` ni `/acceso/verificar/`), `robots.ts` (referencia el sitemap, sin `Disallow` de rutas `noindex`), `noindex` en las dos rutas privadas, metadata y `<title>` propio por página.
-- [ ] 12.3 RED→GREEN: `not-found.tsx` (enlace a `/`, un `h1`, axe).
-- [ ] 12.4 RED→GREEN: `content-guard.test.ts` (design §9, 5 condiciones, con caso de infracción sobre temporal); test de `"use client"` permitido solo en menú, login/verificación, reclutador y playground; test de config (`output`, `trailingSlash`, `images.unoptimized`; sin `rewrites`/`redirects`/`headers`).
-- [ ] 12.5 RED→GREEN: `scripts/check-out.js` CJS con `findViolations(outDir)` (+ `.test.js` con fixtures temporales: rutas, `404.html`, `robots.txt`, `sitemap.xml`, `_next/static` con hash, sin Google Fonts, sin `__WEB_CV_MOCK__` ni «Simular: abrir el enlace»/«Reiniciar demo», sin `.pdf`/`.docx`); script `check:out` y `build` = `next build && npm run check:out`; build con `NEXT_PUBLIC_API_MODE=mock` falla a propósito.
-- [ ] 12.6 `apps/web/docs/delivery-contract.md` + test (cadenas obligatorias incl. `s3:ListBucket`, 403 no mapeado, sin IDs de 12 dígitos ni llaves, rutas documentadas == generadas); `apps/web/README.md` («Por qué esta tecnología», enlaza el contrato).
-- [ ] 12.7 Verificación final de criterios de éxito de la propuesta (build completo, 5 rutas + `404.html`, axe, contraste, guardas, cobertura ≥ 80 %); Lighthouse móvil queda manual.
+- [x] 12.1 Resolver NO VERIFICADO: CSP `style-src 'self'` sin `'unsafe-inline'`. Verificado en Chrome headless contra un export en modo mock con `style-src 'self'` y `script-src 'self' 'unsafe-inline'`: sin violaciones de CSP (2026-10-21). Documentado en delivery-contract.md con la recomendación Report-Only.
+- [x] 12.2 RED→GREEN: `sitemap.ts` (exactamente `/`, `/experiencia/`, `/acceso/`; sin `/reclutador/` ni `/acceso/verificar/`), `robots.ts` (referencia el sitemap, sin `Disallow` de rutas `noindex`), `noindex` en las dos rutas privadas, metadata y `<title>` propio por página.
+- [x] 12.3 RED→GREEN: `not-found.tsx` (enlace a `/`, un `h1`, axe).
+- [x] 12.4 RED→GREEN: `content-guard.test.ts` (design §9, 5 condiciones, con caso de infracción sobre temporal); test de `"use client"` permitido solo en menú, login/verificación, reclutador y playground; test de config (`output`, `trailingSlash`, `images.unoptimized`; sin `rewrites`/`redirects`/`headers`).
+- [x] 12.5 RED→GREEN: `scripts/check-out.js` CJS con `findViolations(outDir)` (+ `.test.js` con fixtures temporales: rutas, `404.html`, `robots.txt`, `sitemap.xml`, `_next/static` con hash, sin Google Fonts, sin `__WEB_CV_MOCK__` ni «Simular: abrir el enlace»/«Reiniciar demo», sin `.pdf`/`.docx`); script `check:out` y `build` = `next build && npm run check:out`; build con `NEXT_PUBLIC_API_MODE=mock` falla a propósito.
+- [x] 12.6 `apps/web/docs/delivery-contract.md` + test (cadenas obligatorias incl. `s3:ListBucket`, 403 no mapeado, sin IDs de 12 dígitos ni llaves, rutas documentadas == generadas); `apps/web/README.md` («Por qué esta tecnología», enlaza el contrato).
+- [x] 12.7 Verificación final de criterios de éxito de la propuesta (build completo, 5 rutas + `404.html`, axe, contraste, guardas, cobertura ≥ 80 %); Lighthouse móvil queda manual.
 - [ ] 12.8 CIERRE (`gitleaks dir apps/web/scripts apps/web/README.md apps/web/docs`).
+  - Nota (apply F): `gitleaks dir` y `gitleaks git` sin hallazgos. `findViolations(outDir, { docPath })` además compara rutas generadas vs documentadas, `noindex`, sitemap, robots y nombres con hash; `build` en modo mock falla (8 violaciones, verificado en copia de trabajo). `404.html` usa `app/not-found.tsx` (Next ya agrega su `noindex`). Los guardas de dinero/teléfono/documentos viven en `content-guard.test.ts` + `src/test/contentRules.ts`; `list-semantics` ahora cubre SiteHeader, MobileMenu y StackSection (`role="list"`).
+  - Nota (apply F, pedido de la usuaria): `LoginForm` valida el `email` también al salir del campo (solo si no está vacío); con error visible revalida en cada cambio; el foco solo se mueve al enviar.
 
 ## Notas de apply
 

@@ -50,9 +50,26 @@ export function LoginForm({
     if (autoFocusEmail) emailRef.current?.focus();
   }, [autoFocusEmail]);
 
+  const messageFor = (problem: ReturnType<typeof validateEmail>) => {
+    if (!problem) return undefined;
+    return problem === 'empty' ? copy.emailEmpty : copy.emailInvalid;
+  };
+
+  // While an error is shown, re-validate on every change so it clears as soon
+  // as the value is valid. The message text is unchanged while still invalid,
+  // so the live region is not re-announced on each keystroke.
   const handleEmail = (event: ChangeEvent<HTMLInputElement>) => {
-    setEmail(event.target.value);
-    setEmailError(undefined);
+    const value = event.target.value;
+    setEmail(value);
+    if (emailError) setEmailError(messageFor(validateEmail(value)));
+  };
+
+  // Blur reports only a typed-but-invalid value; empty is left to submit so
+  // tabbing through the field does not nag. Focus is never moved here.
+  const handleEmailBlur = () => {
+    if (email.trim() === '') return;
+    const message = messageFor(validateEmail(email));
+    if (message) setEmailError(message);
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -60,7 +77,7 @@ export function LoginForm({
     if (submitting) return;
     const problem = validateEmail(email);
     if (problem) {
-      setEmailError(problem === 'empty' ? copy.emailEmpty : copy.emailInvalid);
+      setEmailError(messageFor(problem));
       emailRef.current?.focus();
       return;
     }
@@ -94,6 +111,7 @@ export function LoginForm({
           required
           value={email}
           onChange={handleEmail}
+          onBlur={handleEmailBlur}
           error={emailError}
         />
         <FormField

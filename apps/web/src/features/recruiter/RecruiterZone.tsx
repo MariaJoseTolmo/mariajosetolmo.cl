@@ -13,6 +13,7 @@ import { ContactCard } from './ContactCard';
 import { CvCard } from './CvCard';
 import { DetailsCard } from './DetailsCard';
 import { greeting } from './greeting';
+import { ApiPlayground } from './playground/ApiPlayground';
 import styles from './RecruiterZone.module.css';
 import { isNavigableUrl } from './safeUrl';
 import { SessionBar } from './SessionBar';
@@ -152,6 +153,10 @@ export function RecruiterZone({
             <ContactCard />
             <DetailsCard availability={me.availability} />
           </div>
+          <ApiPlayground
+            gatewayLoader={gatewayLoader}
+            onUnauthorized={() => router.replace('/acceso/')}
+          />
         </main>
         <Footer />
       </>

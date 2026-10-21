@@ -1,12 +1,16 @@
+import type { Metadata } from 'next';
 import { CtaBand } from '@/components/layout/CtaBand';
 import { Footer } from '@/components/layout/Footer';
 import { SiteHeader } from '@/components/layout/SiteHeader';
 import { home } from '@/content/home';
+import { pageMetadata } from '@/content/metadata';
 import { ArchitectureSection } from '@/features/home/ArchitectureSection';
 import { Contributions } from '@/features/home/Contributions';
 import { Hero } from '@/features/home/Hero';
 import { ProjectsSection } from '@/features/home/ProjectsSection';
 import { StackSection } from '@/features/home/StackSection';
+
+export const metadata: Metadata = pageMetadata.home;
 
 export default function HomePage() {
   const { title, text, action } = home.cta;

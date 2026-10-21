@@ -1,0 +1,45 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.lead {
+  max-width: 680px;
+  margin: 0;
+  color: var(--color-ink-2);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.layout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.list {
+  flex: 1 1 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.layout > :last-child {
+  flex: 2 1 480px;
+}

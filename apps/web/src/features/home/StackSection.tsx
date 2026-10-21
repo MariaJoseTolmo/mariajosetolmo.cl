@@ -19,7 +19,7 @@ export function StackSection() {
             className={column.muted ? styles.columnMuted : styles.column}
           >
             <h3 className={styles.title}>{column.title}</h3>
-            <ul className={styles.list}>
+            <ul role="list" className={styles.list}>
               {column.items.map((item) => (
                 <li key={item}>{item}</li>
               ))}
