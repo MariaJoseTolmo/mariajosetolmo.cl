@@ -31,4 +31,14 @@ describe('site content', () => {
       ['GitHub', 'https://github.com/MariaJoseTolmo'],
     ]);
   });
+
+  it('adds the public phone only to the recruiter contact list, not the footer', () => {
+    expect(site.recruiterContact.map((c) => [c.label, c.href])).toEqual([
+      ['mariajosetolmo@gmail.com', 'mailto:mariajosetolmo@gmail.com'],
+      ['+56 9 7453 6288', 'tel:+56974536288'],
+      ['LinkedIn', 'https://linkedin.com/in/mariajosetolmo'],
+      ['GitHub', 'https://github.com/MariaJoseTolmo'],
+    ]);
+    expect(site.contact.map((c) => c.href)).not.toContain('tel:+56974536288');
+  });
 });

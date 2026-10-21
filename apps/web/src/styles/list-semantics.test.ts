@@ -9,6 +9,7 @@ const RESTYLED_LISTS = [
   'features/home/ProjectsSection',
   'features/home/ArchitectureSection',
   'features/login/StepsPanel',
+  'features/recruiter/ContactCard',
 ];
 
 describe('lists restyled with list-style: none', () => {

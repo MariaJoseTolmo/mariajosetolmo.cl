@@ -15,6 +15,8 @@ export interface SiteContent {
   ownerName: string;
   nav: NavLink[];
   contact: ContactLink[];
+  /** Public by the owner's decision, but shown only in the recruiter zone. */
+  recruiterContact: ContactLink[];
   footer: string;
 }
 
@@ -145,4 +147,51 @@ export interface LoginContent {
     items: LoginStep[];
     footnote: string;
   };
+}
+
+export interface VerifyErrorCopy {
+  eyebrow: string;
+  title: string;
+  text: string;
+}
+
+export interface VerifyContent {
+  pending: { title: string };
+  ready: {
+    eyebrow: string;
+    title: string;
+    lead: string;
+    confirm: string;
+    confirming: string;
+  };
+  done: { eyebrow: string; title: string; lead: string; enter: string };
+  errors: {
+    invalid: VerifyErrorCopy;
+    'rate-limited': VerifyErrorCopy;
+    unavailable: VerifyErrorCopy;
+  };
+  newLink: string;
+  retry: string;
+}
+
+export interface RecruiterContent {
+  checking: { title: string };
+  error: { title: string; text: string; retry: string };
+  intro: { eyebrow: string; lead: string };
+  greeting: { base: string; companyPrefix: string };
+  cv: {
+    title: string;
+    text: string;
+    download: string;
+    preparing: string;
+    failed: string;
+  };
+  contact: { title: string };
+  availability: {
+    title: string;
+    modality: string;
+    start: string;
+    salary: string;
+  };
+  session: { logout: string; logoutFailed: string };
 }

@@ -144,20 +144,22 @@ PR 5, 6 y 7 pueden prepararse en paralelo en ramas distintas, pero se mergean en
 ## PR 9: `/acceso/verificar/` (~260)
 
 - [x] 9.0 Q1 resuelta: el token se lee del fragmento `#token=`.
-- [ ] 9.1 RED→GREEN: `useMagicLinkToken.ts` (lee `window.location.hash` tras montar, guarda el token en `useState`, luego `history.replaceState` que vacía el hash; estado `pending` en el primer render; `location.search` se ignora). Tests: hash con token (capturado y hash vacío), sin hash (inválido), `?token=` en la query (ignorado). Único archivo que lee el token.
-- [ ] 9.2 RED→GREEN: `verifyReducer` y `VerifyView` (sin token → inválido con enlace a `/acceso/`).
-- [ ] 9.3 RED→GREEN: `VerifyContainer` (`'use client'`, sin `<Suspense>` ni `useSearchParams`, estado neutral hasta hidratar, sin auto-consumo, `verifyToken` una vez al confirmar, estado «done» con enlace a `/reclutador/`).
-- [ ] 9.4 `app/acceso/verificar/page.tsx` + test + axe; `noindex` vía metadata (se verifica en PR 12).
+- [x] 9.1 RED→GREEN: `useMagicLinkToken.ts` (lee `window.location.hash` tras montar, guarda el token en `useState`, luego `history.replaceState` que vacía el hash; estado `pending` en el primer render; `location.search` se ignora). Tests: hash con token (capturado y hash vacío), sin hash (inválido), `?token=` en la query (ignorado). Único archivo que lee el token.
+- [x] 9.2 RED→GREEN: `verifyReducer` y `VerifyView` (sin token → inválido con enlace a `/acceso/`).
+- [x] 9.3 RED→GREEN: `VerifyContainer` (`'use client'`, sin `<Suspense>` ni `useSearchParams`, estado neutral hasta hidratar, sin auto-consumo, `verifyToken` una vez al confirmar, estado «done» con enlace a `/reclutador/`).
+- [x] 9.4 `app/acceso/verificar/page.tsx` + test + axe; `noindex` vía metadata (se verifica en PR 12).
 - [ ] 9.5 CIERRE (`gitleaks dir apps/web/app/acceso apps/web/src/features/login`).
+  - Nota (apply E): `gitleaks dir` hecho sin hallazgos; revisión/commits/PR los cierra el orquestador. `VerifyView` mantiene un solo `h1` con foco en los estados `done`/`error` (no en `pending`/`ready`); `Reiniciar demo` (solo mock, estado `done`) llama `logout()` y `router.replace('/acceso/')`; la página reutiliza `app/acceso/page.module.css` y el `StepsPanel` (pasos 3 y 4 resaltados). Guarda `src/test/token-guard.test.ts`: solo `useMagicLinkToken.ts` lee `location.hash/search`.
 
 ## PR 10: `/reclutador/` (~390)
 
-- [ ] 10.1 Fuentes fijas (design §8): «Disponibilidad» = `me.availability` de la misma llamada `getMe()` del guard (sin petición extra); CV = `getCvLink()` al hacer clic.
-- [ ] 10.2 RED→GREEN: `greeting.ts` (3 prioridades con `trim`).
-- [ ] 10.3 RED→GREEN: `useRecruiterSession` (`getMe()` al montar; `checking→authorized|redirecting|error`; `unauthorized` → `router.replace('/acceso/')`; red/server → error con «Reintentar», sin redirección). El refresh ya lo cubre 7.4.
-- [ ] 10.4 RED→GREEN: `CvCard` (solo «Descargar PDF», URL firmada al clic), `ContactCard`, `DetailsCard` (valores solo de la API).
-- [ ] 10.5 RED→GREEN: `RecruiterZone` (`'use client'`, «Verificando sesión» con `role="status"`/`aria-busy`, 3 tarjetas exactas, logout) y `app/reclutador/page.tsx`.
+- [x] 10.1 Fuentes fijas (design §8): «Disponibilidad» = `me.availability` de la misma llamada `getMe()` del guard (sin petición extra); CV = `getCvLink()` al hacer clic.
+- [x] 10.2 RED→GREEN: `greeting.ts` (3 prioridades con `trim`).
+- [x] 10.3 RED→GREEN: `useRecruiterSession` (`getMe()` al montar; `checking→authorized|redirecting|error`; `unauthorized` → `router.replace('/acceso/')`; red/server → error con «Reintentar», sin redirección). El refresh ya lo cubre 7.4.
+- [x] 10.4 RED→GREEN: `CvCard` (solo «Descargar PDF», URL firmada al clic), `ContactCard`, `DetailsCard` (valores solo de la API).
+- [x] 10.5 RED→GREEN: `RecruiterZone` (`'use client'`, «Verificando sesión» con `role="status"`/`aria-busy`, 3 tarjetas exactas, logout) y `app/reclutador/page.tsx`.
 - [ ] 10.6 CIERRE (`gitleaks dir apps/web/app/reclutador apps/web/src/features/recruiter`).
+  - Nota (apply E): `gitleaks dir` hecho sin hallazgos. `RecruiterZone` (client) renderiza `SiteHeader` (`minimal` mientras comprueba/error, `session` autorizado), `<main id="contenido">` y `Footer` (la página es solo `<RecruiterZone />`), porque la pill necesita `me`. «Cerrar sesión» → `logout()` y `router.replace('/')` (no `/acceso/` como decía design §8). Descarga: `getCvLink()` al clic + `window.location.assign` solo si la URL es http(s) (`safeUrl.ts`). Teléfono público solo en `site.recruiterContact` (el footer no lo muestra). Sin playground ni su placeholder (PR 11); el lead no menciona la API.
 
 ## PR 11: Playground (~280)
 

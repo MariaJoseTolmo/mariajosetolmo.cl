@@ -1,0 +1,20 @@
+.list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  margin: 0;
+  font-size: 15px;
+}
+
+.row {
+  display: contents;
+}
+
+.term {
+  color: var(--color-muted);
+}
+
+.value {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
