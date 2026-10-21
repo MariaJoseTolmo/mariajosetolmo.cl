@@ -21,6 +21,14 @@ describe('repo configuration guards', () => {
     expect(config).not.toContain("'**/next-env.d.ts'");
   });
 
+  it('chains the export check after the build, so CI runs it unchanged', () => {
+    const { scripts } = JSON.parse(read(webRoot, 'package.json'));
+    expect(scripts['check:out']).toBe('node scripts/check-out.js');
+    expect(scripts.build).toBe(
+      'next build && node scripts/prune-out.js && npm run check:out',
+    );
+  });
+
   it('binds the dev server to localhost only', () => {
     const { scripts } = JSON.parse(read(webRoot, 'package.json'));
     expect(scripts.dev).toMatch(/-H 127\.0\.0\.1/);

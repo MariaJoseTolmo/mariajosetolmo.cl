@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "NEXT_PUBLIC_API_MODE=mock next dev -H 127.0.0.1 -p 3001",
     "preview": "node scripts/serve-out.js",
-    "build": "next build",
+    "build": "next build && node scripts/prune-out.js && npm run check:out",
+    "check:out": "node scripts/check-out.js",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "jest",
     "test:cov": "jest --coverage"
