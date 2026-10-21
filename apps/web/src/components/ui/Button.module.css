@@ -1,0 +1,72 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-inline: 20px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-10);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.size44 {
+  min-height: var(--tap-44);
+}
+
+.size48 {
+  min-height: var(--tap-48);
+}
+
+.size52 {
+  min-height: var(--tap-52);
+}
+
+.primary {
+  background: var(--color-accent);
+  color: var(--color-white);
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+  color: var(--color-white);
+}
+
+.secondary {
+  background: var(--color-surface);
+  border-color: var(--color-ink);
+  color: var(--color-ink);
+}
+
+.secondary:hover:not(:disabled) {
+  color: var(--color-ink);
+}
+
+.outline {
+  background: transparent;
+  border-color: var(--color-border-strong);
+  color: var(--color-ink);
+}
+
+.outline:hover:not(:disabled) {
+  color: var(--color-ink);
+}
+
+.on-dark {
+  background: var(--color-green);
+  color: var(--color-ink);
+}
+
+.on-dark:hover:not(:disabled) {
+  color: var(--color-ink);
+}
