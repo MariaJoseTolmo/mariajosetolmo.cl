@@ -78,7 +78,7 @@ PR 5, 6 y 7 pueden prepararse en paralelo en ramas distintas, pero se mergean en
 
 ## PR 2: Tokens, estilos y átomos (~380)
 
-- [x] 2.1 Resolver NO VERIFICADO de este PR: `next/font/google` en build offline/CI; si falla → `next/font/local` (plan B aprobado, informar). **Resultado (apply A):** con red el build pasa y `out/` no referencia Google; sin red ni caché de `.next/cache/fonts` falla. Se mantuvo `next/font/google` (pendiente de decisión de la usuaria sobre `next/font/local`).
+- [x] 2.1 Resolver NO VERIFICADO de este PR: `next/font/google` en build offline/CI; si falla → `next/font/local` (plan B aprobado, informar). **Resultado (apply A):** con red el build pasa y `out/` no referencia Google; sin red ni caché de `.next/cache/fonts` falla. Se mantuvo `next/font/google`. **Decisión cerrada (design §4):** el CI tiene red, el build offline sin caché falla por diseño y el plan B `next/font/local` queda documentado.
 - [x] 2.2 RED: `src/styles/contrast.test.ts` (pares de design §10; valores leídos de `tokens.css`; nombra el par infractor). **Desviación (apply A):** se omitió `border-strong` sobre `bg` (2,99:1 con la paleta aprobada); la spec solo exige `border-strong` sobre `surface`. **Decisión (review PR A):** `border-strong` (#8F8AAE) se mantiene como fue aprobado, sin cambiar valores; regla: inputs con borde y botones secundarios DEBEN ir sobre `surface` (blanco), nunca directo sobre `bg` (ver design §10). Spec: «Todos los pares cumplen», «Un token degradado rompe el build».
 - [x] 2.3 GREEN: `tokens.css` (16 colores de `exploration.md` §3.2 + `--color-white`, radios, espacios, `--focus-ring`). Verificar `accent` sobre `bg` ≥ 4.5 (≈ 4.56).
 - [x] 2.4 RED→GREEN: `no-raw-colors.test.ts` (CSS fuera de `tokens.css` y TSX sin hex/`rgb(`/`hsl(`), con caso de infracción sobre un temporal.
@@ -127,7 +127,7 @@ PR 5, 6 y 7 pueden prepararse en paralelo en ramas distintas, pero se mergean en
 - [x] 7.4 RED→GREEN: `http.ts` (`fetch` relativo a `/api`, `credentials: 'same-origin'`, `buildInit` único, refresh single-flight interno con test «un solo refresh» de la spec (un `POST /api/auth/refresh`, dos `GET /api/v1/me` → `unauthorized`), mapeo 401/403/410/429/5xx/red, cualquier 2xx de `magic-link` = enviado) con `fetch` fake.
 - [x] 7.5 RED→GREEN: `index.ts` `loadGateway` por `NEXT_PUBLIC_API_MODE` (cacheado, `import()` en rama eliminable). Test: selección mock/http.
 - [x] 7.6 Verificar que Turbopack elimina la rama mock con `NEXT_PUBLIC_API_MODE=http` (`rg __WEB_CV_MOCK__` en `out/`); si no, plan B con alias de módulo (design §6) y avisar.
-- [ ] 7.7 CIERRE (`gitleaks dir apps/web/src/lib`).
+- [x] 7.7 CIERRE (`gitleaks dir apps/web/src/lib`). Hecho por el orquestador: revisión de contexto fresco, commits y PR (#13).
   - Nota (apply D): contrato provisional registrado en apply-progress (rutas `/api/auth/{magic-link,verify,refresh,logout}`, `GET /api/v1/me`, `GET /api/v1/cv`; no hay cambio de auth que lo confirme aún). 7.6: sin `NEXT_PUBLIC_API_MODE` Next no inlinaba la variable y el mock llegaba a `out/`; se añadió `env: { NEXT_PUBLIC_API_MODE: mode }` en `next.config.ts` (+ test). Con eso `rg __WEB_CV_MOCK__|Simular out/` = 0 coincidencias en el build http. `PlaygroundEndpoint` es la unión tipada de los 5 GET (PR 11 añade la lista en runtime).
 
 ## PR 8: `/acceso/` (~400)
@@ -137,7 +137,7 @@ PR 5, 6 y 7 pueden prepararse en paralelo en ramas distintas, pero se mergean en
 - [x] 8.3 RED→GREEN: `LoginContainer` (`'use client'`, `gatewayLoader` por prop, fake en tests, sin `jest.mock`); estado `sent` idéntico ante respuestas distintas, `role="status"`, reintento solo ante error de red.
 - [x] 8.4 RED→GREEN: `StepsPanel`; controles «Simular: abrir el enlace» y «Reiniciar demo» bajo `process.env.NEXT_PUBLIC_API_MODE === 'mock'` (test con ambos modos).
 - [x] 8.5 `app/acceso/page.tsx` + test (axe en cada estado).
-- [ ] 8.6 CIERRE (gitleaks dir hecho en apply D; resto lo cierra el orquestador); si excede 400, mover `StepsPanel` a PR 9 (re-dividir).
+- [x] 8.6 CIERRE (gitleaks dir hecho en apply D; resto lo cierra el orquestador); si excede 400, mover `StepsPanel` a PR 9 (re-dividir). Hecho por el orquestador: revisión de contexto fresco, commits y PR (#13).
 
   - Nota (apply D): «Reiniciar demo» se difiere al estado «done» de PR 9 (en `/acceso/` solo existe «Usar otro correo»); `SiteHeader` minimal ganó el enlace «← Volver al inicio»; `SentView` y `validateEmail` se añadieron como piezas aparte; el texto «Simular: abrir el enlace» vive literal dentro de la rama `=== 'mock'` (no en `content/`) para que desaparezca del bundle http. Solo `LoginContainer.tsx` lleva `'use client'`.
 
@@ -148,7 +148,7 @@ PR 5, 6 y 7 pueden prepararse en paralelo en ramas distintas, pero se mergean en
 - [x] 9.2 RED→GREEN: `verifyReducer` y `VerifyView` (sin token → inválido con enlace a `/acceso/`).
 - [x] 9.3 RED→GREEN: `VerifyContainer` (`'use client'`, sin `<Suspense>` ni `useSearchParams`, estado neutral hasta hidratar, sin auto-consumo, `verifyToken` una vez al confirmar, estado «done» con enlace a `/reclutador/`).
 - [x] 9.4 `app/acceso/verificar/page.tsx` + test + axe; `noindex` vía metadata (se verifica en PR 12).
-- [ ] 9.5 CIERRE (`gitleaks dir apps/web/app/acceso apps/web/src/features/login`).
+- [x] 9.5 CIERRE (`gitleaks dir apps/web/app/acceso apps/web/src/features/login`). Hecho por el orquestador: revisión de contexto fresco, commits y PR (#14).
   - Nota (apply E): `gitleaks dir` hecho sin hallazgos; revisión/commits/PR los cierra el orquestador. `VerifyView` mantiene un solo `h1` con foco en los estados `done`/`error` (no en `pending`/`ready`); `Reiniciar demo` (solo mock, estado `done`) llama `logout()` y `router.replace('/acceso/')`; la página reutiliza `app/acceso/page.module.css` y el `StepsPanel` (pasos 3 y 4 resaltados). Guarda `src/test/token-guard.test.ts`: solo `useMagicLinkToken.ts` lee `location.hash/search`.
 
 ## PR 10: `/reclutador/` (~390)
@@ -158,15 +158,15 @@ PR 5, 6 y 7 pueden prepararse en paralelo en ramas distintas, pero se mergean en
 - [x] 10.3 RED→GREEN: `useRecruiterSession` (`getMe()` al montar; `checking→authorized|redirecting|error`; `unauthorized` → `router.replace('/acceso/')`; red/server → error con «Reintentar», sin redirección). El refresh ya lo cubre 7.4.
 - [x] 10.4 RED→GREEN: `CvCard` (solo «Descargar PDF», URL firmada al clic), `ContactCard`, `DetailsCard` (valores solo de la API).
 - [x] 10.5 RED→GREEN: `RecruiterZone` (`'use client'`, «Verificando sesión» con `role="status"`/`aria-busy`, 3 tarjetas exactas, logout) y `app/reclutador/page.tsx`.
-- [ ] 10.6 CIERRE (`gitleaks dir apps/web/app/reclutador apps/web/src/features/recruiter`).
-  - Nota (apply E): `gitleaks dir` hecho sin hallazgos. `RecruiterZone` (client) renderiza `SiteHeader` (`minimal` mientras comprueba/error, `session` autorizado), `<main id="contenido">` y `Footer` (la página es solo `<RecruiterZone />`), porque la pill necesita `me`. «Cerrar sesión» → `logout()` y `router.replace('/')` (no `/acceso/` como decía design §8). Descarga: `getCvLink()` al clic + `window.location.assign` solo si la URL es http(s) (`safeUrl.ts`). Teléfono público solo en `site.recruiterContact` (el footer no lo muestra). Sin playground ni su placeholder (PR 11); el lead no menciona la API.
+- [x] 10.6 CIERRE (`gitleaks dir apps/web/app/reclutador apps/web/src/features/recruiter`). Hecho por el orquestador: revisión de contexto fresco, commits y PR (#14).
+  - Nota (apply E): `gitleaks dir` hecho sin hallazgos. `RecruiterZone` (client) renderiza `SiteHeader` (`minimal` mientras comprueba/error, `session` autorizado), `<main id="contenido">` y `Footer` (la página es solo `<RecruiterZone />`), porque la pill necesita `me`. «Cerrar sesión» → `logout()` y `router.replace('/')` (no `/acceso/` como decía design §8). Descarga: `getCvLink()` al clic + `window.location.assign` solo si la URL es https (`safeUrl.ts`). Teléfono público solo en `site.recruiterContact` (el footer no lo muestra). Sin playground ni su placeholder (PR 11); el lead no menciona la API.
 
 ## PR 11: Playground (~280)
 
 - [x] 11.1 RED→GREEN: `endpoints.ts` (allowlist tipada de 5 GET) y `call()` rechaza fuera de la lista.
 - [x] 11.2 RED→GREEN: `EndpointButton` (`aria-pressed`), `ResponseViewer` (`<pre aria-live="polite">`, método/ruta/estado/JSON).
 - [x] 11.3 RED→GREEN: `ApiPlayground` (primer endpoint al autorizar, cambio de selección, `admin/visits` → 403 para RECRUITER); integrar en `RecruiterZone`.
-- [ ] 11.4 CIERRE (`gitleaks dir apps/web/src/features/recruiter/playground`).
+- [x] 11.4 CIERRE (`gitleaks dir apps/web/src/features/recruiter/playground`). Hecho por el orquestador: revisión de contexto fresco, commits y PR (#15).
   - Nota (apply F): `gitleaks dir` hecho sin hallazgos; revisión/commits/PR los cierra el orquestador. La allowlist runtime vive en `src/lib/api/playground-endpoints.ts` (no en `features/recruiter/playground/endpoints.ts` como decía design §2) porque ambos adaptadores (`http`, `mock`) deben validar y `lib` no importa de `features`; `call()` fuera de la lista devuelve `unexpected` sin hacer fetch. `ResponseViewer` reutiliza `CodeWindow`/`highlightJson`; la región viva persistente (`role="status"`) anuncia la línea de estado, no el JSON (design §8 decía `<pre aria-live>`). Guarda en vuelo: `aria-disabled` en los 5 botones mientras carga + ref síncrona. `RecruiterZone` pasa `onUnauthorized` → `/acceso/`.
 
 ## PR 12: Cierre del sitio (~380)
@@ -178,7 +178,7 @@ PR 5, 6 y 7 pueden prepararse en paralelo en ramas distintas, pero se mergean en
 - [x] 12.5 RED→GREEN: `scripts/check-out.js` CJS con `findViolations(outDir)` (+ `.test.js` con fixtures temporales: rutas, `404.html`, `robots.txt`, `sitemap.xml`, `_next/static` con hash, sin Google Fonts, sin `__WEB_CV_MOCK__` ni «Simular: abrir el enlace»/«Reiniciar demo», sin `.pdf`/`.docx`); script `check:out` y `build` = `next build && npm run check:out`; build con `NEXT_PUBLIC_API_MODE=mock` falla a propósito.
 - [x] 12.6 `apps/web/docs/delivery-contract.md` + test (cadenas obligatorias incl. `s3:ListBucket`, 403 no mapeado, sin IDs de 12 dígitos ni llaves, rutas documentadas == generadas); `apps/web/README.md` («Por qué esta tecnología», enlaza el contrato).
 - [x] 12.7 Verificación final de criterios de éxito de la propuesta (build completo, 5 rutas + `404.html`, axe, contraste, guardas, cobertura ≥ 80 %); Lighthouse móvil queda manual.
-- [ ] 12.8 CIERRE (`gitleaks dir apps/web/scripts apps/web/README.md apps/web/docs`).
+- [x] 12.8 CIERRE (`gitleaks dir apps/web/scripts apps/web/README.md apps/web/docs`). Hecho por el orquestador: revisión de contexto fresco, commits y PR (#15).
   - Nota (apply F): `gitleaks dir` y `gitleaks git` sin hallazgos. `findViolations(outDir, { docPath })` además compara rutas generadas vs documentadas, `noindex`, sitemap, robots y nombres con hash; `build` en modo mock falla (8 violaciones, verificado en copia de trabajo). `404.html` usa `app/not-found.tsx` (Next ya agrega su `noindex`). Los guardas de dinero/teléfono/documentos viven en `content-guard.test.ts` + `src/test/contentRules.ts`; `list-semantics` ahora cubre SiteHeader, MobileMenu y StackSection (`role="list"`).
   - Nota (apply F, pedido de la usuaria): `LoginForm` valida el `email` también al salir del campo (solo si no está vacío); con error visible revalida en cada cambio; el foco solo se mueve al enviar.
 

@@ -18,7 +18,7 @@
 ```
 apps/web/
 ├── package.json  next.config.ts  tsconfig.json  jest.config.js  jest.setup.ts
-├── scripts/check-out.js (+ check-out.test.js)          # CJS: se testea sin VM modules; `npm run check:out`
+├── scripts/check-out.js (+test)  prune-out.js (+test)  serve-out.js (+test)  # CJS: se testean sin VM modules; `check:out`, poda de `404/`, vista previa de `out/`
 ├── docs/delivery-contract.md                           # contrato para infra (lo produce y versiona apps/web)
 ├── README.md                                           # enlaza docs/delivery-contract.md
 ├── app/
@@ -40,7 +40,8 @@ apps/web/
     │   │          VerifyView  VerifyContainer('use client')  StepsPanel  useMagicLinkToken.ts
     │   └── recruiter/ greeting.ts  useRecruiterSession.ts  RecruiterZone('use client')
     │                  CvCard  ContactCard  DetailsCard  playground/{ApiPlayground, EndpointButton, ResponseViewer}
-    └── lib/api/ types.ts  port.ts  errors.ts  index.ts(loadGateway)  http.ts  mock/{index.ts, fixtures.ts}
+    │                  (la allowlist de endpoints vive en lib/api/playground-endpoints.ts)
+    └── lib/api/ types.ts  port.ts  errors.ts  index.ts(loadGateway)  http.ts  playground-endpoints.ts  mock/{index.ts, fixtures.ts}
 ```
 
 Cada carpeta de componente contiene `X.tsx`, `X.module.css` y `X.test.tsx`. No hay archivos barril (*barrel files*): cada import apunta al archivo directo (`bundle-barrel-imports`).
@@ -98,8 +99,10 @@ module.exports = nextJest({ dir: './' })({
 | Script | Comando |
 |--------|---------|
 | `dev` | `NEXT_PUBLIC_API_MODE=mock next dev` |
-| `build` | `next build && npm run check:out` |
-| `check:out` | `node scripts/check-out.js` |
+| `build` | `next build && node scripts/prune-out.js && npm run check:out` |
+| `prune-out` | `node scripts/prune-out.js` (quita `out/404/`, duplicado de `404.html`; se ejecuta dentro de `build`) |
+| `check:out` | `node scripts/check-out.js` (exige además al menos un `.woff2` en `_next/static/`) |
+| `preview` | `node scripts/serve-out.js` (sirve `out/` como CloudFront, en `127.0.0.1:3002`) |
 | `typecheck` | `next typegen && tsc --noEmit` |
 | `test` / `test:cov` | `jest` / `jest --coverage` |
 
@@ -112,6 +115,10 @@ No hay `test:e2e`.
   - Plan B: `@next/next` (reglas `recommended` + `core-web-vitals`) y `react-hooks` (`recommended`).
   - En los dos planes: `no-restricted-syntax` sobre `JSXAttribute[name.name="style"]`. No se permiten estilos inline; todo va a CSS Modules.
 - Plan B se activa si Plan A da `ERESOLVE`. **Se rechazan** `--legacy-peer-deps`, `--force` y `overrides`: ocultan una incompatibilidad real. Lo que se pierde de `jsx-a11y` lo cubre jest-axe.
+
+**Fuentes (decisión cerrada, tarea 2.1):** se mantiene `next/font/google`. El CI tiene red, y el build sin red ni caché de `.next/cache/fonts` falla a propósito en lugar de degradarse en silencio. Las fuentes se descargan en el build y se sirven desde `out/_next/static/` (`check-out` exige un `.woff2` y rechaza cualquier referencia a Google). Plan B documentado: `next/font/local` con los `.woff2` versionados, si algún día hace falta un build offline.
+
+**`out/_not-found/`:** carpeta interna de Next (la usa el router del cliente y repite el contenido de `404.html`). No es una ruta del sitio, no está en el sitemap y es inofensiva; `check-out` la ignora como ruta y el contrato de entrega lo documenta. No se poda porque `404.html` y el router la referencian.
 
 **`.gitignore`:** agregar `.next/`, `out/` y `next-env.d.ts`. `src/next-types.d.ts` existe para que el lint con tipos del CI, que corre antes de `typecheck`, conozca los tipos de `*.module.css` aunque `next-env.d.ts` no exista todavía.
 
@@ -239,12 +246,12 @@ Usuario      LoginContainer      Gateway             API
 | Contacto directo | `src/content/site.ts` (datos públicos por decisión de la usuaria) |
 | Disponibilidad | `me.availability`, de la misma respuesta de `getMe()` que usa el guard (sin segunda petición ni segundo estado de carga). Las etiquetas son estáticas; los valores llegan solo por la API |
 
-La pill de sesión muestra `me.email · rol {me.role}`. "Cerrar sesión" llama a `logout()` y luego hace `replace` a `/` (decisión del dueño, 2026-10-21; reemplaza el `/acceso/` original). Una sesión ya expirada (`unauthorized`) también termina en `/`. Descargar el CV solo navega a URLs `https:`.
+La pill de sesión muestra `me.email · rol {me.role}`. "Cerrar sesión" llama a `logout()` y luego hace `replace` a `/` (decisión del dueño, 2026-10-21; reemplaza el `/acceso/` original). El cierre de sesión termina en `/`. La guardia de sesión es distinta: una sesión ausente o expirada (`unauthorized`, también al descargar el CV o usar el playground) redirige a `/acceso/`. Descargar el CV solo navega a URLs `https:`.
 
 **Playground:**
 - `src/lib/api/playground-endpoints.ts` es una allowlist tipada de 5 endpoints `GET`: `/api/v1/profile`, `/api/v1/experience?limit=2`, `/api/v1/skills?level=advanced`, `/api/v1/me` y `/api/v1/admin/visits` (403 esperado). `call()` solo acepta esa lista.
 - `EndpointButton` usa `aria-pressed`, y el CSS lo estiliza con `[aria-pressed="true"]`.
-- `ResponseViewer` es un `<pre>` con `aria-live="polite"` que muestra método, ruta, estado y el JSON formateado con `JSON.stringify(_, null, 2)`.
+- `ResponseViewer` muestra método, ruta, estado y el JSON formateado con `JSON.stringify(_, null, 2)` en un `<pre>` estático. La live region es una línea de estado persistente (`<p role="status">`) que anuncia el estado (cargando, 200 OK, 403…); el `<pre>` no lleva `aria-live`, para no leer el JSON completo.
 - El primer endpoint se pide al pasar a `authorized`; los demás, al hacer clic.
 
 ## 9. Contenido
@@ -254,7 +261,7 @@ La pill de sesión muestra `me.email · rol {me.role}`. "Cerrar sesión" llama a
 | `site.ts` | `SiteContent { domain; ownerName; nav: NavLink[]; contact: ContactLink[]; footer }` |
 | `home.ts` | `HomeContent { hero: { eyebrow; title; lead; ctas: NavLink[]; sample: { path; json } }; contributions: Item[]; architecture: { nodes; chips: NavLink[] } }` |
 | `stack.ts` / `projects.ts` | `StackColumn { id; title; items: string[] }[]` / `Project { id; title; summary; href; tags }[]` |
-| `experience.ts` | `ExperienceItem { id; company; role; period: { start; end: string \| null }; summary; highlights[] }[]` y `EducationItem[]` |
+| `experience.ts` | (`period` es una etiqueta de texto, p. ej. `2023 – 2024 · remoto`) `ExperienceItem { id; company; role; period: string; summary; highlights[] }[]` y `EducationItem[]` |
 
 **`content-guard.test.ts`** falla cuando:
 
@@ -274,7 +281,7 @@ La pill de sesión muestra `me.email · rol {me.role}`. "Cerrar sesión" llama a
 | Foco visible | `:focus-visible { outline: var(--focus-ring); outline-offset: 2px }` en `globals.css`; en superficies oscuras, anillo `--color-green` |
 | Menú móvil | `aria-expanded`, `aria-controls`, Escape cierra y devuelve el foco al botón, `aria-current="page"` en la nav |
 | Formularios | `label` + `for`, `autocomplete`, `aria-describedby` para el error, `role="alert"` |
-| Live regions | `aria-busy` en `checking` y `aria-live` en el playground |
+| Live regions | `aria-busy` en `checking` y `role="status"` en la línea de estado del playground |
 | Movimiento | `prefers-reduced-motion` desactiva las transiciones |
 
 `contrast.test.ts` lee `tokens.css` con una regex, calcula la luminancia relativa de WCAG 2.x (`(L1+0.05)/(L2+0.05)`) y exige:
@@ -325,24 +332,20 @@ Vive junto a su productor: el test que compara rutas documentadas con `out/` cor
 
 ## 13. Plan de PRs (stacked-to-main, sin lockfile)
 
-| PR | Contenido | Líneas |
-|----|-----------|--------|
-| 1 | **Smoke test:** `package.json`, configuraciones, `next-types.d.ts`, ESLint y `.gitignore`, layout mínimo y una página con un test de render + axe | ~220 |
-| 2 | `tokens.css`, `globals.css`, `fonts.ts`, `contrast.test`, `no-raw-colors.test`, `Button`/`LinkButton`, `Eyebrow`, `SkipLink` | ~380 |
-| 3 | `content/types.ts` + `site.ts`, `SiteHeader` (3 variantes), `MobileMenu`, `Footer` | ~380 |
-| 4 | Inicio A: `Hero`, `CodeWindow` + `highlightJson`, `Contributions`, `StackSection`, `home.ts`/`stack.ts` | ~390 |
-| 5 | Inicio B: `ProjectsSection`, `ArchitectureSection` (chips), `CtaBand`, `projects.ts` | ~330 |
-| 6 | Experiencia: `Timeline`, `TimelineItem`, `EducationSection`, `experience.ts` | ~330 |
-| 7 | `lib/api`: tipos, puerto, errores, `loadGateway`, `http` + refresh, `mock` | ~390 |
-| 8 | `/acceso/`: `loginReducer`, `LoginForm`, `LoginContainer`, `StepsPanel`, `FormField` | ~400 |
-| 9 | `/acceso/verificar/`: `verifyReducer`, `useMagicLinkToken`, `VerifyView`, `VerifyContainer` | ~260 |
-| 10 | `/reclutador/`: `useRecruiterSession`, `greeting`, 3 tarjetas, `RecruiterZone` | ~390 |
-| 11 | Playground: `endpoints`, `EndpointButton`, `ResponseViewer`, `ApiPlayground` | ~280 |
-| 12 | Metadata, `sitemap`, `robots`, `not-found`, `content-guard`, `check-out` en `build`, contrato de entrega, README | ~380 |
+El plan original era de 12 PRs de ~400 líneas. Se ejecutó el plan de **6 PRs con `size:exception`** (decisión de la usuaria, registrada en el cuerpo de cada PR; el repo no tiene la etiqueta). Cada PR agrupa dos unidades y pasó por revisión de contexto fresco con `quality` y `secrets` en verde antes del merge.
 
-Total ≈ 3.930 líneas, contra unas 2.000 en la propuesta.
+| PR | Unidades | Contenido | PR GitHub | Tamaño real (sin lockfile) |
+|----|----------|-----------|-----------|----------------------------|
+| A | 1–2 | Smoke test (workspace, configuraciones, ESLint) + `tokens.css`, `globals.css`, fuentes, `Button`/`LinkButton`, `Eyebrow`, `SkipLink` | #10 | ~1,4k |
+| B | 3–4 | `content/types.ts` + `site.ts`, `SiteHeader`, `MobileMenu`, `Footer` + Inicio A (`Hero`, `CodeWindow`, `Contributions`, `StackSection`) | #11 | ~2k–3k |
+| C | 5–6 | Inicio B (`ProjectsSection`, `ArchitectureSection`, `CtaBand`) + Experiencia (`Timeline`, `EducationSection`) | #12 | ~2k–3k |
+| D | 7–8 | `lib/api` (puerto, errores, `http` + refresh, `mock`) + `/acceso/` (`loginReducer`, `LoginForm`, `LoginContainer`, `StepsPanel`) | #13 | ~2k–3k |
+| E | 9–10 | `/acceso/verificar/` (`verifyReducer`, `useMagicLinkToken`) + `/reclutador/` (`useRecruiterSession`, tarjetas, `RecruiterZone`) | #14 | ~2k–3k |
+| F | 11–12 | Playground + metadata, `sitemap`, `robots`, `not-found`, `content-guard`, `check-out`/`prune-out` en `build`, contrato de entrega, README | #15 | ~2k–3k |
 
-**Reversión:** cada PR se revierte con `git revert` del merge, en orden inverso, porque cada uno depende de los anteriores. Revertir el PR 1 elimina el workspace y obliga a regenerar el lockfile. Revertir el PR 12 saca `check-out` del `build`. Ningún PR toca `apps/api` ni `ci.yml`.
+Los tamaños reales quedaron entre 2,5 y 4 veces lo estimado (~600–790 líneas por PR) porque cada unidad incluye sus tests (TDD estricto). El detalle de la evidencia RED → GREEN por unidad está en `apply-progress.md`.
+
+**Reversión:** cada PR se revierte con `git revert` del merge, en orden inverso, porque cada uno depende de los anteriores. Revertir el PR A elimina el workspace y obliga a regenerar el lockfile. Revertir el PR F saca `check-out` del `build`. Ningún PR toca `apps/api` ni `ci.yml`.
 
 ## 14. Puerta del smoke test (tarea 1)
 
@@ -365,7 +368,7 @@ Total ≈ 3.930 líneas, contra unas 2.000 en la propuesta.
 
 | Riesgo | Mitigación |
 |--------|------------|
-| **El plan de 6 PRs no cumple el presupuesto de 400 líneas** | Plan de 12 PRs o `size:exception`. **Hace falta una decisión antes de `apply`** |
+| **El plan de 6 PRs no cumple el presupuesto de 400 líneas** | Resuelto: se aceptó `size:exception` (PRs #10–#15, ~1,4k–3k líneas cada uno), con revisión de contexto fresco en cada PR |
 | Peers de ESLint 10 | Plan B ya aprobado |
 | Turbopack no elimina la rama del mock | `check-out` lo detecta; plan B con alias de módulo |
 | Las custom error responses afectan también a `/api/*` | Está documentado en el contrato; decide infra |
@@ -387,10 +390,10 @@ Regla aplicada: prevalece la spec, salvo que la opción del design sea técnicam
 | 5 | Ruta del contrato | `apps/web/docs/delivery-contract.md` | Spec | Lo produce y lo testea `apps/web`; se versiona con su código |
 | 6 | Mapeo de errores en CloudFront | Solo 404 → `/404.html` (404), con `s3:ListBucket` en el OAC; 403 nunca | Design | Las custom error responses aplican a toda la distribución; mapear 403 rompe el 403 de `admin/visits` |
 | 7 | Origen de "Disponibilidad" | `getMe().availability` | Spec | Reutiliza la respuesta del guard (una petición menos) y no inventa un endpoint que el cambio de auth no tiene |
-| 9 | Token del magic link en el fragmento (`#token=`), decisión de la usuaria 2026-10-21 | Usuaria | El fragmento no llega a CloudFront, sus logs ni `Referer`, y elimina `useSearchParams`/`Suspense` en la verificación |
 | 8 | Contenido del sitemap | `/`, `/experiencia/`, `/acceso/`; sin `/reclutador/` ni `/acceso/verificar/` (`noindex`) | Ambos (ya coincidían) | Se agrega al design la regla de `robots.txt` sin `Disallow` |
+| 9 | Token del magic link | En el fragmento (`#token=`), decisión de la usuaria 2026-10-21 | Usuaria | El fragmento no llega a CloudFront, sus logs ni `Referer`, y elimina `useSearchParams`/`Suspense` en la verificación |
 
 ## Preguntas abiertas
 
 - [x] 1. Resuelta (2026-10-21): el token viaja en el fragmento (`/acceso/verificar/#token=…`). El correo del cambio de auth debe usar `https://mariajosetolmo.cl/acceso/verificar/#token=<token>`.
-- [ ] 2. ¿Se pasa a 12 PRs o se acepta `size:exception` con menos PRs?
+- [x] 2. Resuelta: se aceptó `size:exception` con 6 PRs (#10–#15); ver §13.
