@@ -1,0 +1,49 @@
+.view {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.lead {
+  margin: 0;
+  color: var(--color-ink-2);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.networkError {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--color-ink);
+  border-radius: var(--radius-8);
+  color: var(--color-ink);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.privacy {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
