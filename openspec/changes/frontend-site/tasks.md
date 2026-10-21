@@ -107,15 +107,17 @@ PR 5, 6 y 7 pueden prepararse en paralelo en ramas distintas, pero se mergean en
 
 ## PR 5: Inicio B y página `/` (~330)
 
-- [ ] 5.1 RED→GREEN: `ProjectsSection` (`#proyectos`), `ArchitectureSection` (`#como`; chips `/api/docs` y `/api/health`, nunca `/api-docs`, `/status`, `#como`), `CtaBand`, `projects.ts`.
-- [ ] 5.2 RED: `app/page.test.tsx` ampliado (orden de secciones, anclas `#proyectos`/`#stack`/`#como`, un `h1`, sin botón Word/«Agendar», axe). GREEN: componer `app/page.tsx` (síncrona, sin API).
-- [ ] 5.3 CIERRE (`gitleaks dir apps/web/app apps/web/src/features/home`).
+- [x] 5.1 RED→GREEN: `ProjectsSection` (`#proyectos`), `ArchitectureSection` (`#como`; chips `/api/docs` y `/api/health`, nunca `/api-docs`, `/status`, `#como`), `CtaBand`, `projects.ts`.
+- [x] 5.2 RED: `app/page.test.tsx` ampliado (orden de secciones, anclas `#proyectos`/`#stack`/`#como`, un `h1`, sin botón Word/«Agendar», axe). GREEN: componer `app/page.tsx` (síncrona, sin API).
+- [x] 5.3 CIERRE (`gitleaks dir apps/web/app apps/web/src/features/home`).
+  - Nota (apply C): `CtaBand` (variante `band` en Inicio, `card` en Experiencia) vive en `components/layout`; `Callout` en `components/ui`. Copia de la arquitectura y de la banda en `home.ts` (`architecture`, `cta`); `projects.ts` exporta `REPOSITORY_URL`. Se añadió `src/styles/breakpoints.test.ts` (solo 761px; 900px solo en header).
 
 ## PR 6: Experiencia (~330)
 
-- [ ] 6.1 RED→GREEN: `experience.ts` y `TimelineItem`/`Timeline` (5 ítems).
-- [ ] 6.2 RED→GREEN: `EducationSection`; `app/experiencia/page.tsx` + test (nav idéntica a Inicio, `aria-current`, `h1` único, axe).
-- [ ] 6.3 CIERRE (`gitleaks dir apps/web/app/experiencia apps/web/src/features/experience`).
+- [x] 6.1 RED→GREEN: `experience.ts` y `TimelineItem`/`Timeline` (5 ítems).
+- [x] 6.2 RED→GREEN: `EducationSection`; `app/experiencia/page.tsx` + test (nav idéntica a Inicio, `aria-current`, `h1` único, axe).
+- [x] 6.3 CIERRE (`gitleaks dir apps/web/app/experiencia apps/web/src/features/experience`).
+  - Nota (apply C): `/experiencia/` incluye `Footer` (el mockup no lo trae; es el pie compartido). `ExperienceItem.period` es la etiqueta de texto («2023 – 2024 · remoto»), no `{start,end}` como en design §9.
 
 ## PR 7: `lib/api` (~390)
 

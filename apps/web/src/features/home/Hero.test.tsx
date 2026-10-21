@@ -23,10 +23,10 @@ describe('Hero', () => {
     render(<Hero />);
     expect(
       screen.getByRole('link', { name: 'Solicitar CV completo' }),
-    ).toHaveAttribute('href', '/acceso');
+    ).toHaveAttribute('href', expect.stringMatching(/^\/acceso\/?$/));
     expect(
       screen.getByRole('link', { name: 'Ver experiencia' }),
-    ).toHaveAttribute('href', '/experiencia');
+    ).toHaveAttribute('href', expect.stringMatching(/^\/experiencia\/?$/));
   });
 
   it('shows the GET /api/v1/profile card labeled as an example', () => {

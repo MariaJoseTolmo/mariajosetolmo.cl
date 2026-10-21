@@ -1,3 +1,4 @@
+import { REPOSITORY_URL } from './projects';
 import type { HomeContent } from './types';
 
 const sampleJson = `{
@@ -50,5 +51,41 @@ export const home: HomeContent = {
         text: 'Coordinación de disciplinas y liderazgo de equipos en proyectos complejos: la misma base que pide un sistema bien diseñado.',
       },
     ],
+  },
+  architecture: {
+    eyebrow: '04 / Cómo está hecha esta web',
+    title: 'El portafolio también es el código de muestra.',
+    lead: 'Sitio estático servido por CloudFront y una API NestJS propia en AWS Lambda. AWS es lo que estoy aprendiendo, aplicado en este proyecto. Puedes revisar la documentación de los endpoints y el estado de la API.',
+    nodes: [
+      {
+        id: 'frontend',
+        label: 'frontend',
+        title: 'Next.js estático',
+        text: 'Generado en el build, en S3 + CloudFront',
+      },
+      {
+        id: 'api',
+        label: 'api',
+        title: 'NestJS · hexagonal',
+        text: 'En AWS Lambda. Magic link + JWT RS256, refresh rotativo, guards por rol',
+        emphasis: true,
+      },
+      {
+        id: 'datos',
+        label: 'datos',
+        title: 'PostgreSQL · Redis',
+        text: 'Contenido, sesiones, rate limit',
+      },
+    ],
+    chips: [
+      { label: '/api/docs', href: '/api/docs' },
+      { label: '/api/health', href: '/api/health' },
+      { label: 'Repositorio', href: REPOSITORY_URL },
+    ],
+  },
+  cta: {
+    title: '¿Buscas una desarrolladora backend Node.js?',
+    text: 'Ingresa con tu correo, sin contraseña. Accedes al CV completo, contacto directo y la API de prueba.',
+    action: { label: 'Recibir enlace de acceso', href: '/acceso/' },
   },
 };
