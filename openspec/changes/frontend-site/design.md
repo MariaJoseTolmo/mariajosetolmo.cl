@@ -39,7 +39,7 @@ apps/web/
     │   ├── login/ loginReducer.ts  verifyReducer.ts  LoginForm  LoginContainer('use client')
     │   │          VerifyView  VerifyContainer('use client')  StepsPanel  useMagicLinkToken.ts
     │   └── recruiter/ greeting.ts  useRecruiterSession.ts  RecruiterZone('use client')
-    │                  CvCard  ContactCard  DetailsCard  playground/{endpoints.ts, ApiPlayground, EndpointButton, ResponseViewer}
+    │                  CvCard  ContactCard  DetailsCard  playground/{ApiPlayground, EndpointButton, ResponseViewer}
     └── lib/api/ types.ts  port.ts  errors.ts  index.ts(loadGateway)  http.ts  mock/{index.ts, fixtures.ts}
 ```
 
@@ -242,7 +242,7 @@ Usuario      LoginContainer      Gateway             API
 La pill de sesión muestra `me.email · rol {me.role}`. "Cerrar sesión" llama a `logout()` y luego hace `replace` a `/` (decisión del dueño, 2026-10-21; reemplaza el `/acceso/` original). Una sesión ya expirada (`unauthorized`) también termina en `/`. Descargar el CV solo navega a URLs `https:`.
 
 **Playground:**
-- `endpoints.ts` es una allowlist tipada de 5 endpoints `GET`: `/api/v1/profile`, `/api/v1/experience?limit=2`, `/api/v1/skills?level=advanced`, `/api/v1/me` y `/api/v1/admin/visits` (403 esperado). `call()` solo acepta esa lista.
+- `src/lib/api/playground-endpoints.ts` es una allowlist tipada de 5 endpoints `GET`: `/api/v1/profile`, `/api/v1/experience?limit=2`, `/api/v1/skills?level=advanced`, `/api/v1/me` y `/api/v1/admin/visits` (403 esperado). `call()` solo acepta esa lista.
 - `EndpointButton` usa `aria-pressed`, y el CSS lo estiliza con `[aria-pressed="true"]`.
 - `ResponseViewer` es un `<pre>` con `aria-live="polite"` que muestra método, ruta, estado y el JSON formateado con `JSON.stringify(_, null, 2)`.
 - El primer endpoint se pide al pasar a `authorized`; los demás, al hacer clic.
