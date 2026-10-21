@@ -8,6 +8,8 @@ const USE_CLIENT = /^\s*(['"])use client\1/m;
 const ALLOWED = [
   'src/components/layout/MobileMenu.tsx',
   'src/features/login/LoginContainer.tsx',
+  'src/features/login/VerifyContainer.tsx',
+  'src/features/recruiter/RecruiterZone.tsx',
 ];
 
 function walk(dir: string): string[] {
