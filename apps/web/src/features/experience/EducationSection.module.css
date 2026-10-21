@@ -1,0 +1,38 @@
+.section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px 48px;
+}
+
+.title {
+  flex: 0 1 240px;
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.list {
+  display: flex;
+  flex: 1 1 520px;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  color: var(--color-ink-2);
+  font-size: 16px;
+  list-style: none;
+}
+
+.entry {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.period {
+  color: var(--color-muted);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 14px;
+}

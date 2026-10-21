@@ -1,0 +1,65 @@
+.item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 48px;
+  padding: 36px 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.item:last-child {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.meta {
+  display: flex;
+  flex: 0 1 240px;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.period {
+  color: var(--color-muted);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 13px;
+}
+
+.company {
+  color: var(--color-ink);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.sector {
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+.body {
+  display: flex;
+  flex: 1 1 520px;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.role {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.highlights {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--color-ink-2);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.technologies {
+  margin: 0;
+  color: var(--color-muted);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 13px;
+}
