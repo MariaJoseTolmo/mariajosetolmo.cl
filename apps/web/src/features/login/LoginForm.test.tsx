@@ -88,11 +88,11 @@ describe('LoginForm validation', () => {
     expect(email()).toHaveAccessibleDescription(/Revisa el correo/);
   });
 
-  it('clears the error as soon as the user edits the email', async () => {
+  it('clears the error as soon as the email becomes valid', async () => {
     const { user } = setup();
     await user.click(send());
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    await user.type(email(), 'a');
+    await user.type(email(), 'ana@empresa.com');
     expect(screen.queryByRole('alert')).toBeNull();
     expect(email()).toHaveAttribute('aria-invalid', 'false');
   });
@@ -100,6 +100,87 @@ describe('LoginForm validation', () => {
   it('has no axe violations while showing a field error', async () => {
     const { user, container } = setup();
     await user.click(send());
+    expect(await axe(container)).toHaveNoViolations();
+  });
+});
+
+describe('LoginForm validation on blur', () => {
+  it('shows the invalid error when leaving a non-empty invalid email', async () => {
+    const { user } = setup();
+    await user.type(email(), 'no-es-correo');
+    expect(screen.queryByRole('alert')).toBeNull();
+    await user.tab();
+    expect(screen.getByRole('alert')).toHaveTextContent(/Revisa el correo/);
+    expect(email()).toHaveAttribute('aria-invalid', 'true');
+    expect(email()).toHaveAccessibleDescription(/Revisa el correo/);
+  });
+
+  it('does not move focus on blur', async () => {
+    const { user } = setup();
+    await user.type(email(), 'no-es-correo');
+    await user.tab();
+    expect(email()).not.toHaveFocus();
+    expect(screen.getByLabelText('Empresa (opcional)')).toHaveFocus();
+  });
+
+  it('does not nag about an empty email on blur', async () => {
+    const { user } = setup();
+    await user.click(email());
+    await user.tab();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(email()).toHaveAttribute('aria-invalid', 'false');
+  });
+
+  it('does not flag a whitespace-only email on blur', async () => {
+    const { user } = setup();
+    await user.type(email(), '   ');
+    await user.tab();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('does not error on blur for a valid email', async () => {
+    const { user } = setup();
+    await user.type(email(), 'ana@empresa.com');
+    await user.tab();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('clears the blur error while typing, without another blur', async () => {
+    const { user } = setup();
+    await user.type(email(), 'ana@empresa');
+    await user.tab();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    await user.click(email());
+    await user.type(email(), '.com');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(email()).toHaveAttribute('aria-invalid', 'false');
+  });
+
+  it('keeps the same alert node while the value stays invalid', async () => {
+    const { user } = setup();
+    await user.type(email(), 'ana');
+    await user.tab();
+    const alert = screen.getByRole('alert');
+    await user.click(email());
+    await user.type(email(), 'x');
+    expect(screen.getByRole('alert')).toBe(alert);
+    expect(alert).toHaveTextContent(/Revisa el correo/);
+  });
+
+  it('still focuses the email when submitting an invalid value', async () => {
+    const { onSubmit, user } = setup();
+    await user.type(email(), 'no-es-correo');
+    await user.tab();
+    await user.click(send());
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(email()).toHaveFocus();
+  });
+
+  it('has no axe violations with the blur error shown', async () => {
+    const { user, container } = setup();
+    await user.type(email(), 'no-es-correo');
+    await user.tab();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(await axe(container)).toHaveNoViolations();
   });
 });

@@ -14,6 +14,16 @@ Capacidad NUEVA. Define el acceso de reclutadores en `apps/web`: login con magic
 - WHEN la usuaria escribe "no-es-correo" y envía
 - THEN aparece un mensaje de error y `requestMagicLink` no fue invocado
 
+#### Scenario: Validación al salir del campo
+
+- GIVEN el campo `email` con un valor no vacío e inválido
+- WHEN la usuaria sale del campo (blur)
+- THEN el sistema MUST mostrar el mismo mensaje de error "inválido" que al enviar, con `aria-invalid="true"` y `aria-describedby` apuntando al mensaje
+- AND el sistema MUST NOT mover el foco
+- AND un `email` vacío al salir del campo MUST NOT mostrar el error "vacío" (solo se reporta al enviar)
+- AND mientras el error esté visible, el sistema MUST revalidar en cada cambio y MUST quitar el error en cuanto el valor sea válido, sin esperar otro blur
+- AND el sistema SHOULD anunciar el error solo cuando aparece por primera vez, no en cada tecla
+
 #### Scenario: Envío con opcionales vacíos
 
 - GIVEN `email` válido y `empresa`/`nombre` vacíos
