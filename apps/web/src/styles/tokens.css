@@ -1,0 +1,40 @@
+/* Single source of truth for design tokens. Colors live only in this file. */
+:root {
+  --color-bg: #f5f4fa;
+  --color-surface: #ffffff;
+  --color-white: #ffffff;
+  --color-ink: #15132b;
+  --color-ink-2: #3a3654;
+  --color-muted: #5a5675;
+  --color-border: #dedceb;
+  --color-border-strong: #8f8aae;
+  --color-accent: #6d5bdf;
+  --color-accent-hover: #5546c2;
+  --color-green: #9edf81;
+  --color-code-string: #c9c1ff;
+  --color-dark-border: #2b2847;
+  --color-dark-active: #221f3d;
+  --color-on-dark: #eceaf7;
+  --color-on-dark-2: #c4c0dc;
+  --color-on-dark-muted: #a9a5c4;
+
+  --radius-8: 8px;
+  --radius-10: 10px;
+  --radius-12: 12px;
+  --radius-14: 14px;
+  --radius-pill: 999px;
+
+  --container: 1200px;
+  --space-section: 88px;
+  --space-section-hero: 96px;
+  --space-section-cta: 80px;
+  --space-section-page: 72px;
+  --space-section-compact: 56px;
+
+  --tap-44: 44px;
+  --tap-48: 48px;
+  --tap-52: 52px;
+
+  --focus-ring-width: 2px;
+  --focus-ring: var(--focus-ring-width) solid var(--color-accent);
+}

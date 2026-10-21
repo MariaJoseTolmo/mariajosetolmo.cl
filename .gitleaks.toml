@@ -1,0 +1,15 @@
+# Default gitleaks rules, plus an allowlist for generated, gitignored build output.
+# Next.js writes per-build preview/encryption keys into .next/, which trip the
+# generic-api-key rule when scanning the working directory (`gitleaks dir`).
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Generated build artifacts (gitignored, never committed)"
+paths = [
+  '''(^|/)\.next/''',
+  '''(^|/)apps/web/out/''',
+  '''(^|/)cdk\.out/''',
+  '''(^|/)node_modules/''',
+  '''(^|/)coverage/''',
+]

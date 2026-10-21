@@ -21,7 +21,7 @@ echo "== 2/4 rg: account data in file contents =="
 # 12-digit account IDs, ARNs, access key IDs, real CloudFront hostnames and real
 # Web Function endpoint hostnames. A bare 'cloudfront.net' / 'on.aws' is NOT scanned
 # because the openspec docs mention '*.cloudfront.net' legitimately.
-if rg -n --no-ignore --hidden -g '!.git' -g '!node_modules' -g '!cdk.out' -g '!dist' -g '!package-lock.json' \
+if rg -n --no-ignore --hidden -g '!.git' -g '!node_modules' -g '!cdk.out' -g '!dist' -g '!.next' -g '!apps/web/out' -g '!coverage' -g '!package-lock.json' \
   -e '\b[0-9]{12}\b' \
   -e 'arn:aws[:][a-z0-9-]*:[a-z0-9-]*:[0-9]{12}' \
   -e 'AKIA[0-9A-Z]{16}' \

@@ -280,16 +280,20 @@ La pill de sesión muestra `me.email · rol {me.role}`. "Cerrar sesión" llama a
 - **Texto ≥ 4.5:1:**
   - `ink`, `ink-2` y `muted` sobre `bg` y sobre `surface`
   - `accent` y `accent-hover` sobre `bg` y sobre `surface`
-  - `white` sobre `accent`
+  - `white` sobre `accent` y sobre `accent-hover` (hover de `Button primary`)
   - `on-dark`, `on-dark-2`, `on-dark-muted`, `green`, `code-string` y `white` sobre `ink`
   - `on-dark` sobre `dark-active`
   - `ink` sobre `green`
 - **UI ≥ 3:1:**
-  - `border-strong` sobre `surface` y sobre `bg`
+  - `border-strong` sobre `surface` (sobre `bg` da 2,99:1 con la paleta aprobada, ver regla abajo)
   - `accent` sobre `surface` (anillo de foco)
   - `green` sobre `ink` (foco sobre oscuro)
 
 `accent` sobre `bg` calculado a mano da ≈ 4.56. Pasa, pero sin margen.
+
+Regla: inputs con borde y botones secundarios (`border-strong`) van siempre sobre `surface` (blanco), nunca directamente sobre `bg`.
+
+Regla: los estilos globales de enlaces usan `:where()` (especificidad 0) para que las clases de componente (`.primary`, etc.) ganen siempre, incluso en `:hover`.
 
 ## 11. `scripts/check-out.js` y CI
 

@@ -66,26 +66,26 @@ PR 5, 6 y 7 pueden prepararse en paralelo en ramas distintas, pero se mergean en
 
 ## PR 1: Smoke test y esqueleto (~220)
 
-- [ ] 1.1 **Puerta del smoke test** (design §14). `npm view <pkg> version peerDependencies` para cada NO VERIFICADO: `react-dom`, `@types/react`, `@types/react-dom`, `@testing-library/dom`, `@testing-library/jest-dom`, `@testing-library/user-event`, `@types/jest-axe`, `eslint-config-next`, `@next/eslint-plugin-next`. Registrar en `apply-progress`.
-- [ ] 1.2 Crear `apps/web/package.json` (pins exactos, scripts de design §4), `tsconfig.json`, `next.config.ts` (validación de `NEXT_PUBLIC_API_MODE`), `src/next-types.d.ts`; `npm install` en la raíz sin flags.
-- [ ] 1.3 Plan A: instalar `eslint-config-next` en la raíz. Si hay `ERESOLVE` por peers de ESLint 10 → Plan B una vez (`@next/eslint-plugin-next` + `eslint-plugin-react-hooks` 7.1.1) y avisar. Si Plan B falla → STOP y preguntar. Prohibido `--legacy-peer-deps`, `--force`, `overrides` y cambiar de herramienta sin ADR + aprobación.
-- [ ] 1.4 Editar `eslint.config.mjs` (ignores `.next`, `out`, `next-env.d.ts`; bloque `apps/web/**` con `no-restricted-syntax` sobre `style`) y `.gitignore`.
-- [ ] 1.5 RED: `jest.config.js` (`next/jest`, Jest 30), `jest.setup.ts` y `app/page.test.tsx` (render + `axe`, un `h1`, `lang="es"`) fallando. Primero sin `--experimental-vm-modules`; si falla por ESM (p. ej. `jest-axe` 11), añadir `NODE_OPTIONS=--experimental-vm-modules` como en `apps/api` (precedente aprobado). Si `next/jest` no funciona con Jest 30 → STOP y preguntar.
-- [ ] 1.6 GREEN: `app/layout.tsx` mínimo y `app/page.tsx` con `h1`; test en verde.
-- [ ] 1.7 Desde clon limpio (sin `.next/` ni `next-env.d.ts`): `npm run lint`, `npm run typecheck`, `npm test -w apps/web`, `npm run build -w apps/web` (genera `out/index.html`), `npm run test:cov`, `npm run format:check`. Tras el build, `tsconfig.json` sin cambios (si Next añade claves, aceptarlas y registrarlas). Si `output: 'export'` falla → STOP y preguntar.
-- [ ] 1.8 Verificar que `ci.yml` pasa sin cambios con el nuevo workspace.
-- [ ] 1.9 CIERRE (`gitleaks dir apps/web`, `eslint.config.mjs`).
+- [x] 1.1 **Puerta del smoke test** (design §14). `npm view <pkg> version peerDependencies` para cada NO VERIFICADO: `react-dom`, `@types/react`, `@types/react-dom`, `@testing-library/dom`, `@testing-library/jest-dom`, `@testing-library/user-event`, `@types/jest-axe`, `eslint-config-next`, `@next/eslint-plugin-next`. Registrar en `apply-progress`.
+- [x] 1.2 Crear `apps/web/package.json` (pins exactos, scripts de design §4), `tsconfig.json`, `next.config.ts` (validación de `NEXT_PUBLIC_API_MODE`), `src/next-types.d.ts`; `npm install` en la raíz sin flags.
+- [x] 1.3 Plan A: instalar `eslint-config-next` en la raíz. Si hay `ERESOLVE` por peers de ESLint 10 → Plan B una vez (`@next/eslint-plugin-next` + `eslint-plugin-react-hooks` 7.1.1) y avisar. Si Plan B falla → STOP y preguntar. Prohibido `--legacy-peer-deps`, `--force`, `overrides` y cambiar de herramienta sin ADR + aprobación.
+- [x] 1.4 Editar `eslint.config.mjs` (ignores `.next`, `out`, `next-env.d.ts`; bloque `apps/web/**` con `no-restricted-syntax` sobre `style`) y `.gitignore`.
+- [x] 1.5 RED: `jest.config.js` (`next/jest`, Jest 30), `jest.setup.ts` y `app/page.test.tsx` (render + `axe`, un `h1`, `lang="es"`) fallando. Primero sin `--experimental-vm-modules`; si falla por ESM (p. ej. `jest-axe` 11), añadir `NODE_OPTIONS=--experimental-vm-modules` como en `apps/api` (precedente aprobado). Si `next/jest` no funciona con Jest 30 → STOP y preguntar.
+- [x] 1.6 GREEN: `app/layout.tsx` mínimo y `app/page.tsx` con `h1`; test en verde.
+- [x] 1.7 Desde clon limpio (sin `.next/` ni `next-env.d.ts`): `npm run lint`, `npm run typecheck`, `npm test -w apps/web`, `npm run build -w apps/web` (genera `out/index.html`), `npm run test:cov`, `npm run format:check`. Tras el build, `tsconfig.json` sin cambios (si Next añade claves, aceptarlas y registrarlas). Si `output: 'export'` falla → STOP y preguntar.
+- [x] 1.8 Verificar que `ci.yml` pasa sin cambios con el nuevo workspace.
+- [x] 1.9 CIERRE (`gitleaks dir apps/web`, `eslint.config.mjs`).
 
 ## PR 2: Tokens, estilos y átomos (~380)
 
-- [ ] 2.1 Resolver NO VERIFICADO de este PR: `next/font/google` en build offline/CI; si falla → `next/font/local` (plan B aprobado, informar).
-- [ ] 2.2 RED: `src/styles/contrast.test.ts` (pares de design §10; valores leídos de `tokens.css`; nombra el par infractor). Spec: «Todos los pares cumplen», «Un token degradado rompe el build».
-- [ ] 2.3 GREEN: `tokens.css` (16 colores de `exploration.md` §3.2 + `--color-white`, radios, espacios, `--focus-ring`). Verificar `accent` sobre `bg` ≥ 4.5 (≈ 4.56).
-- [ ] 2.4 RED→GREEN: `no-raw-colors.test.ts` (CSS fuera de `tokens.css` y TSX sin hex/`rgb(`/`hsl(`), con caso de infracción sobre un temporal.
-- [ ] 2.5 `globals.css` (`:focus-visible`, `prefers-reduced-motion`) y `fonts.ts` (Plex Sans 400/600/700, Mono 400/500); conectar en `layout.tsx`.
-- [ ] 2.6 RED→GREEN por componente (`.tsx` + `.module.css` + `.test.tsx` + axe): `Button`, `LinkButton`, `Eyebrow`, `SkipLink` (primer foco, `href="#contenido"`; cada página con `<main id="contenido">`).
-- [ ] 2.7 REFACTOR: quitar duplicación de CSS; tap targets `--tap-44`.
-- [ ] 2.8 CIERRE (`gitleaks dir apps/web/src/styles apps/web/src/components`).
+- [x] 2.1 Resolver NO VERIFICADO de este PR: `next/font/google` en build offline/CI; si falla → `next/font/local` (plan B aprobado, informar). **Resultado (apply A):** con red el build pasa y `out/` no referencia Google; sin red ni caché de `.next/cache/fonts` falla. Se mantuvo `next/font/google` (pendiente de decisión de la usuaria sobre `next/font/local`).
+- [x] 2.2 RED: `src/styles/contrast.test.ts` (pares de design §10; valores leídos de `tokens.css`; nombra el par infractor). **Desviación (apply A):** se omitió `border-strong` sobre `bg` (2,99:1 con la paleta aprobada); la spec solo exige `border-strong` sobre `surface`. **Decisión (review PR A):** `border-strong` (#8F8AAE) se mantiene como fue aprobado, sin cambiar valores; regla: inputs con borde y botones secundarios DEBEN ir sobre `surface` (blanco), nunca directo sobre `bg` (ver design §10). Spec: «Todos los pares cumplen», «Un token degradado rompe el build».
+- [x] 2.3 GREEN: `tokens.css` (16 colores de `exploration.md` §3.2 + `--color-white`, radios, espacios, `--focus-ring`). Verificar `accent` sobre `bg` ≥ 4.5 (≈ 4.56).
+- [x] 2.4 RED→GREEN: `no-raw-colors.test.ts` (CSS fuera de `tokens.css` y TSX sin hex/`rgb(`/`hsl(`), con caso de infracción sobre un temporal.
+- [x] 2.5 `globals.css` (`:focus-visible`, `prefers-reduced-motion`) y `fonts.ts` (Plex Sans 400/600/700, Mono 400/500); conectar en `layout.tsx`.
+- [x] 2.6 RED→GREEN por componente (`.tsx` + `.module.css` + `.test.tsx` + axe): `Button`, `LinkButton`, `Eyebrow`, `SkipLink` (primer foco, `href="#contenido"`; cada página con `<main id="contenido">`).
+- [x] 2.7 REFACTOR: quitar duplicación de CSS; tap targets `--tap-44`.
+- [x] 2.8 CIERRE (`gitleaks dir apps/web/src/styles apps/web/src/components`).
 
 ## PR 3: Contenido base y navegación (~380)
 
