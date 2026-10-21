@@ -1,0 +1,9 @@
+.page {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 48px;
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: clamp(32px, 6vw, 64px) 16px 64px;
+}

@@ -3,15 +3,16 @@ import { join } from 'node:path';
 
 // Safari/VoiceOver drops list semantics when `list-style: none` is applied,
 // so every list restyled that way must declare role="list" explicitly.
-const PR_C_LISTS = [
+const RESTYLED_LISTS = [
   'features/experience/Timeline',
   'features/experience/EducationSection',
   'features/home/ProjectsSection',
   'features/home/ArchitectureSection',
+  'features/login/StepsPanel',
 ];
 
 describe('lists restyled with list-style: none', () => {
-  it.each(PR_C_LISTS)('%s keeps role="list" in its markup', (base) => {
+  it.each(RESTYLED_LISTS)('%s keeps role="list" in its markup', (base) => {
     const css = readFileSync(
       join(__dirname, '..', `${base}.module.css`),
       'utf8',

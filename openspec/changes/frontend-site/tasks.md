@@ -121,22 +121,25 @@ PR 5, 6 y 7 pueden prepararse en paralelo en ramas distintas, pero se mergean en
 
 ## PR 7: `lib/api` (~390)
 
-- [ ] 7.1 Confirmar con el cambio de auth el contrato provisional de `me` (`email`, `role`, `company`, `name`, `availability`) y de CV/`logout`; registrar en `apply-progress`. Puerto fijo (design §6): `requestMagicLink`, `verifyToken(token)`, `getMe`, `getCvLink`, `logout`, `call`; `refresh` es interno de `http`.
-- [ ] 7.2 `types.ts`, `port.ts`, `errors.ts` (tipos; sin test propio salvo mapeo de errores).
-- [ ] 7.3 RED→GREEN: `mock/` determinista (sin `Math.random` ni timers; `mock-token`; sesión en `sessionStorage`; `admin/visits` → 403; placeholders `[dato de ejemplo]`; `MOCK_MARKER = '__WEB_CV_MOCK__'` en la respuesta de `getMe`).
-- [ ] 7.4 RED→GREEN: `http.ts` (`fetch` relativo a `/api`, `credentials: 'same-origin'`, `buildInit` único, refresh single-flight interno con test «un solo refresh» de la spec (un `POST /api/auth/refresh`, dos `GET /api/v1/me` → `unauthorized`), mapeo 401/403/410/429/5xx/red, cualquier 2xx de `magic-link` = enviado) con `fetch` fake.
-- [ ] 7.5 RED→GREEN: `index.ts` `loadGateway` por `NEXT_PUBLIC_API_MODE` (cacheado, `import()` en rama eliminable). Test: selección mock/http.
-- [ ] 7.6 Verificar que Turbopack elimina la rama mock con `NEXT_PUBLIC_API_MODE=http` (`rg __WEB_CV_MOCK__` en `out/`); si no, plan B con alias de módulo (design §6) y avisar.
+- [x] 7.1 Confirmar con el cambio de auth el contrato provisional de `me` (`email`, `role`, `company`, `name`, `availability`) y de CV/`logout`; registrar en `apply-progress`. Puerto fijo (design §6): `requestMagicLink`, `verifyToken(token)`, `getMe`, `getCvLink`, `logout`, `call`; `refresh` es interno de `http`.
+- [x] 7.2 `types.ts`, `port.ts`, `errors.ts` (tipos; sin test propio salvo mapeo de errores).
+- [x] 7.3 RED→GREEN: `mock/` determinista (sin `Math.random` ni timers; `mock-token`; sesión en `sessionStorage`; `admin/visits` → 403; placeholders `[dato de ejemplo]`; `MOCK_MARKER = '__WEB_CV_MOCK__'` en la respuesta de `getMe`).
+- [x] 7.4 RED→GREEN: `http.ts` (`fetch` relativo a `/api`, `credentials: 'same-origin'`, `buildInit` único, refresh single-flight interno con test «un solo refresh» de la spec (un `POST /api/auth/refresh`, dos `GET /api/v1/me` → `unauthorized`), mapeo 401/403/410/429/5xx/red, cualquier 2xx de `magic-link` = enviado) con `fetch` fake.
+- [x] 7.5 RED→GREEN: `index.ts` `loadGateway` por `NEXT_PUBLIC_API_MODE` (cacheado, `import()` en rama eliminable). Test: selección mock/http.
+- [x] 7.6 Verificar que Turbopack elimina la rama mock con `NEXT_PUBLIC_API_MODE=http` (`rg __WEB_CV_MOCK__` en `out/`); si no, plan B con alias de módulo (design §6) y avisar.
 - [ ] 7.7 CIERRE (`gitleaks dir apps/web/src/lib`).
+  - Nota (apply D): contrato provisional registrado en apply-progress (rutas `/api/auth/{magic-link,verify,refresh,logout}`, `GET /api/v1/me`, `GET /api/v1/cv`; no hay cambio de auth que lo confirme aún). 7.6: sin `NEXT_PUBLIC_API_MODE` Next no inlinaba la variable y el mock llegaba a `out/`; se añadió `env: { NEXT_PUBLIC_API_MODE: mode }` en `next.config.ts` (+ test). Con eso `rg __WEB_CV_MOCK__|Simular out/` = 0 coincidencias en el build http. `PlaygroundEndpoint` es la unión tipada de los 5 GET (PR 11 añade la lista en runtime).
 
 ## PR 8: `/acceso/` (~400)
 
-- [ ] 8.1 RED→GREEN: `loginReducer` (`editing→submitting→sent|error`; eventos SUBMIT/SUCCEEDED/FAILED/RESET).
-- [ ] 8.2 RED→GREEN: `FormField` y `LoginForm` (labels, `autocomplete`, `aria-describedby`, `role="alert"`, email inválido no llama al gateway, `trim` y omisión de opcionales).
-- [ ] 8.3 RED→GREEN: `LoginContainer` (`'use client'`, `gatewayLoader` por prop, fake en tests, sin `jest.mock`); estado `sent` idéntico ante respuestas distintas, `role="status"`, reintento solo ante error de red.
-- [ ] 8.4 RED→GREEN: `StepsPanel`; controles «Simular: abrir el enlace» y «Reiniciar demo» bajo `process.env.NEXT_PUBLIC_API_MODE === 'mock'` (test con ambos modos).
-- [ ] 8.5 `app/acceso/page.tsx` + test (axe en cada estado).
-- [ ] 8.6 CIERRE; si excede 400, mover `StepsPanel` a PR 9 (re-dividir).
+- [x] 8.1 RED→GREEN: `loginReducer` (`editing→submitting→sent|error`; eventos SUBMIT/SUCCEEDED/FAILED/RESET).
+- [x] 8.2 RED→GREEN: `FormField` y `LoginForm` (labels, `autocomplete`, `aria-describedby`, `role="alert"`, email inválido no llama al gateway, `trim` y omisión de opcionales).
+- [x] 8.3 RED→GREEN: `LoginContainer` (`'use client'`, `gatewayLoader` por prop, fake en tests, sin `jest.mock`); estado `sent` idéntico ante respuestas distintas, `role="status"`, reintento solo ante error de red.
+- [x] 8.4 RED→GREEN: `StepsPanel`; controles «Simular: abrir el enlace» y «Reiniciar demo» bajo `process.env.NEXT_PUBLIC_API_MODE === 'mock'` (test con ambos modos).
+- [x] 8.5 `app/acceso/page.tsx` + test (axe en cada estado).
+- [ ] 8.6 CIERRE (gitleaks dir hecho en apply D; resto lo cierra el orquestador); si excede 400, mover `StepsPanel` a PR 9 (re-dividir).
+
+  - Nota (apply D): «Reiniciar demo» se difiere al estado «done» de PR 9 (en `/acceso/` solo existe «Usar otro correo»); `SiteHeader` minimal ganó el enlace «← Volver al inicio»; `SentView` y `validateEmail` se añadieron como piezas aparte; el texto «Simular: abrir el enlace» vive literal dentro de la rama `=== 'mock'` (no en `content/`) para que desaparezca del bundle http. Solo `LoginContainer.tsx` lleva `'use client'`.
 
 ## PR 9: `/acceso/verificar/` (~260)
 

@@ -66,6 +66,11 @@ export function SiteHeader({
             <MobileMenu items={site.nav} currentPath={currentPath} />
           </>
         ) : null}
+        {variant === 'minimal' ? (
+          <Link className={styles.back} href="/">
+            <span aria-hidden="true">←</span> Volver al inicio
+          </Link>
+        ) : null}
         {variant === 'session' ? children : null}
       </div>
     </header>

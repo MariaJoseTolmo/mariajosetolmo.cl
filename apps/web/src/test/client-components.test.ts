@@ -5,7 +5,10 @@ const webRoot = join(__dirname, '..', '..');
 const USE_CLIENT = /^\s*(['"])use client\1/m;
 
 /** Allowed Client Components. Future PRs extend this list deliberately. */
-const ALLOWED = ['src/components/layout/MobileMenu.tsx'];
+const ALLOWED = [
+  'src/components/layout/MobileMenu.tsx',
+  'src/features/login/LoginContainer.tsx',
+];
 
 function walk(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
