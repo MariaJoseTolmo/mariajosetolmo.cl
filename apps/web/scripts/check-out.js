@@ -74,6 +74,9 @@ function checkStructure(outDir) {
   const statics = path.join(outDir, '_next', 'static');
   if (!fs.existsSync(statics) || !fs.statSync(statics).isDirectory()) {
     violations.push('missing _next/static/');
+  } else if (!walk(statics).some((file) => file.endsWith('.woff2'))) {
+    // Fonts are self-hosted by next/font; none means they were not bundled.
+    violations.push('missing self-hosted font: no .woff2 under _next/static/');
   }
   return violations;
 }
