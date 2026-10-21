@@ -40,12 +40,12 @@ Un build con `mock` falla a propósito en `check:out`: el mock no puede llegar a
 ## Build, check:out y vista previa
 
 ```bash
-npm run build -w apps/web      # next build + check:out; genera apps/web/out/
+npm run build -w apps/web      # next build + prune-out.js + check:out; genera apps/web/out/
 npm run check:out -w apps/web  # solo la verificación de out/
 npm run preview -w apps/web    # http://127.0.0.1:3002/
 ```
 
-`build` encadena `check:out` (`scripts/check-out.js`), así que el job `quality` del CI lo ejecuta sin cambios en `ci.yml`. Verifica que existan todas las rutas, `404.html`, `robots.txt`, `sitemap.xml` y `_next/static/`; que no haya Google Fonts, restos del mock ni PDF/Word; y que las rutas privadas lleven `noindex`.
+`build` encadena `prune-out.js` (quita el `404/` duplicado) y `check:out` (`scripts/check-out.js`), así que el job `quality` del CI lo ejecuta sin cambios en `ci.yml`. Verifica que existan todas las rutas, `404.html`, `robots.txt`, `sitemap.xml` y `_next/static/`, con al menos una fuente `.woff2`; que no haya Google Fonts, restos del mock ni PDF/Word; y que las rutas privadas lleven `noindex`.
 
 `preview` es un servidor Node mínimo (`scripts/serve-out.js`, sin dependencias) que sirve `out/` como lo haría CloudFront: `index.html` por directorio, redirección a la barra final y `404.html` para rutas inexistentes. Se puede cambiar el puerto con `PORT=3010 npm run preview -w apps/web`.
 

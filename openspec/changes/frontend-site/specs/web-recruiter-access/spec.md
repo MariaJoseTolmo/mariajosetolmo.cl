@@ -199,14 +199,18 @@ Los controles "Simular: abrir el enlace" y "Reiniciar demo" MUST existir solo co
 #### Scenario: Visibles en mock
 
 - GIVEN `NEXT_PUBLIC_API_MODE=mock`
-- WHEN se renderiza el estado "sent" y el estado "done"
-- THEN existen "Simular: abrir el enlace" y "Reiniciar demo"
+- WHEN se renderiza el estado "sent" del login
+- THEN el control "Simular: abrir el enlace" MUST existir
+- AND "Reiniciar demo" MUST NOT existir en ese estado
+- WHEN se renderiza el estado "done" de la verificación
+- THEN el control "Reiniciar demo" MUST existir
+- AND "Simular: abrir el enlace" MUST NOT existir en ese estado
 
 #### Scenario: Ausentes en http
 
 - GIVEN `NEXT_PUBLIC_API_MODE=http`
-- WHEN se renderizan los mismos estados
-- THEN no existen esos controles
+- WHEN se renderizan los estados "sent" y "done"
+- THEN "Simular: abrir el enlace" y "Reiniciar demo" MUST NOT existir en el DOM ni en el build
 
 ### Requirement: El mock no llega a producción
 

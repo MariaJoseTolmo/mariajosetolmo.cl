@@ -55,6 +55,11 @@ describe('delivery contract document', () => {
     expect(doc).toContain(text);
   });
 
+  it('documents out/_not-found/ as a Next internal, not a site route', () => {
+    expect(section('Artefacto')).toMatch(/`_not-found\/`.*(interna|interno)/s);
+    expect(documentedRoutes(doc)).not.toContain('/_not-found/');
+  });
+
   it('lists the header values (not the names) in the value column', () => {
     expect(doc).toMatch(/Referrer-Policy`?\s*\|\s*`?no-referrer`?\s*\|/);
     expect(doc).toMatch(/X-Content-Type-Options`?\s*\|\s*`?nosniff`?\s*\|/);
@@ -151,6 +156,7 @@ describe('README', () => {
     'NEXT_PUBLIC_API_MODE',
     'mock',
     'http',
+    'prune-out.js',
   ])('covers %s', (text) => {
     expect(readme).toContain(text);
   });

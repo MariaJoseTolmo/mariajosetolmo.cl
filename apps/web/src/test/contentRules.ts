@@ -23,11 +23,33 @@ const PHONE: RegExp[] = [
   /\(9\)\s?\d{4}[ -]?\d{4}\b/,
 ];
 
+const MONTHS =
+  '(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|january|february|march|april|june|july|august|september|october|november|december)';
+
+/**
+ * Availability dates come from the API, never from the source. Bare years
+ * (work history) and ISO timestamps (YYYY-MM-DD) are not availability.
+ */
+const AVAILABILITY: RegExp[] = [
+  /\bdisponib\w*\s+(desde|inicio|a\s+partir)\b/i,
+  // Day/month/year with / or -; the lookarounds keep ISO dates and versions out.
+  /(?<![\d.\-/])\d{1,2}[/-]\d{1,2}[/-]\d{2,4}(?![\d.\-/])/,
+  new RegExp(`\\b${MONTHS}\\s+(de\\s+)?\\d{4}\\b`, 'i'),
+  // "desde el 1 de marzo", "inicio: 15 de abril".
+  new RegExp(
+    `\\b(desde|inicio:?)\\s+(el\\s+)?(\\d{1,2}\\s+de\\s+)?${MONTHS}\\b`,
+    'i',
+  ),
+];
+
 const DOCUMENT = /\.(pdf|docx?|odt)$/i;
 const SKIPPED_DIRS = new Set(['node_modules', '.next', 'out', 'coverage']);
 
 export const moneyMatches = (text: string) =>
   MONEY.filter((pattern) => pattern.test(text)).map(String);
+
+export const availabilityMatches = (text: string) =>
+  AVAILABILITY.filter((pattern) => pattern.test(text)).map(String);
 
 export const phoneMatches = (text: string) =>
   PHONE.filter((pattern) => pattern.test(text)).map(String);

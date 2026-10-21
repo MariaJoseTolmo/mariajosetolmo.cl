@@ -45,6 +45,7 @@ function buildValidOut() {
   write('_next/static/chunks/0cz1d0mv5g_q7.js', 'console.log(1)');
   write('_next/static/chunks/22a1l9nuboy4s.css', 'a{}');
   write('_next/static/BUILDID/_buildManifest.js', '');
+  write('_next/static/media/0a1b2c3d4e5f6.woff2', 'font');
   write(
     'robots.txt',
     `User-Agent: *\nAllow: /\n\nSitemap: ${HOME}/sitemap.xml\n`,
@@ -194,6 +195,19 @@ describe('findViolations', () => {
     const found = run().join('\n');
     expect(found).toContain('/nueva/');
     expect(found).toContain('/reclutador/');
+  });
+});
+
+describe('self-hosted fonts', () => {
+  it('requires at least one .woff2 under _next/static', () => {
+    fs.rmSync(path.join(out, '_next/static/media'), { recursive: true });
+    expect(run()).toEqual([expect.stringContaining('.woff2')]);
+  });
+
+  it('ignores a .woff2 outside _next/static', () => {
+    fs.rmSync(path.join(out, '_next/static/media'), { recursive: true });
+    write('fonts/stray.woff2', 'font');
+    expect(run()).toEqual([expect.stringContaining('.woff2')]);
   });
 });
 

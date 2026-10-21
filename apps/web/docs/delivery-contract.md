@@ -9,6 +9,7 @@ El entregable es `apps/web/out/`, generado por `next build` con `output: 'export
 - Un `index.html` por ruta (ver la sección siguiente) y `404.html` en la raíz.
 - `_next/static/*`: JavaScript y CSS con hash de contenido en el nombre, aptos para caché inmutable.
 - `robots.txt` y `sitemap.xml`.
+- `_not-found/`: carpeta interna de Next (la usa el router del cliente y es el mismo contenido que `404.html`). No es una ruta del sitio: no está en el sitemap ni se enlaza, y no hay que servirla de forma especial ni documentarla como ruta.
 - Nada de PDF ni Word: el CV se entrega con una URL firmada desde la API.
 
 ## Rutas generadas
@@ -69,9 +70,9 @@ La query string queda fuera de la clave de caché del comportamiento por defecto
 | Cabecera                    | Valor                                                                                                                                                                                                                |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Content-Security-Policy`   | `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'` |
-| `Referrer-Policy`           | `no-referrer` |
+| `Referrer-Policy`           | `no-referrer`                                                                                                                                                                                                        |
 | `Strict-Transport-Security` | `max-age=63072000; includeSubDomains`                                                                                                                                                                                |
-| `X-Content-Type-Options`    | `nosniff` |
+| `X-Content-Type-Options`    | `nosniff`                                                                                                                                                                                                            |
 | `X-Frame-Options`           | `DENY`                                                                                                                                                                                                               |
 | `Permissions-Policy`        | Restrictiva: `camera=(), microphone=(), geolocation=()`                                                                                                                                                              |
 
@@ -99,7 +100,7 @@ El enlace del correo es `https://mariajosetolmo.cl/acceso/verificar/#token=<toke
 `check:out` falla con código distinto de 0, nombrando cada archivo, si en `out/`:
 
 - falta alguno de los `index.html` de las rutas, `404.html`, `robots.txt`, `sitemap.xml` o `_next/static/`;
-- aparece `fonts.googleapis.com` o `fonts.gstatic.com`;
+- aparece `fonts.googleapis.com` o `fonts.gstatic.com`, o no hay ningún `.woff2` en `_next/static/` (las fuentes se autoalojan);
 - aparece un resto del adaptador de pruebas (`__WEB_CV_MOCK__`, "Simular: abrir el enlace", "Reiniciar demo"), señal de un build hecho con `NEXT_PUBLIC_API_MODE=mock`;
 - hay archivos `.pdf`, `.doc`, `.docx` u `.odt`;
 - una ruta privada no tiene `noindex`, o el sitemap o `robots.txt` no cumplen lo anterior;

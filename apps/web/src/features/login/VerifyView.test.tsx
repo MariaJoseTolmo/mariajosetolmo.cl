@@ -119,6 +119,8 @@ describe('VerifyView', () => {
       screen.getByRole('button', { name: 'Reiniciar demo' }),
     );
     expect(mock.onResetDemo).toHaveBeenCalledTimes(1);
+    // "Simular" belongs to the login sent state, never to done.
+    expect(screen.queryByText(/Simular/)).toBeNull();
     mock.unmount();
 
     process.env.NEXT_PUBLIC_API_MODE = 'http';

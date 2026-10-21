@@ -3,6 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { axe } from '@/test/axe';
 import { Button } from './Button';
 
+// Class assertions: CSS-module class names are identity-mapped in Jest, so
+// `toHaveClass('outline')` only proves the variant is wired. The visual result
+// is checked by the build and in the browser.
 describe('Button', () => {
   it('renders a non-submitting button by default', () => {
     render(<Button>Enviar</Button>);
