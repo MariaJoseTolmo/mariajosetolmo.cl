@@ -2,7 +2,7 @@
 
 **Proyecto**: web_cv · **Cambio**: `frontend-site` · **Fecha de archivo**: 2026-10-21
 **Modo de persistencia**: openspec (con traza en Engram)
-**Estado**: archivado. Specs principales creadas. Movimiento de carpeta pendiente de ejecución (ver sección 5).
+**Estado**: archivado. Specs principales creadas y carpeta del cambio movida al archivo.
 
 ## 1. Resumen
 
@@ -42,25 +42,18 @@ Normalización aplicada (solo encabezados, sin cambiar texto de requisitos ni es
 
 ## 4. Verificación
 
-Fuente: `openspec/changes/frontend-site/verify-report.md`, sección "Re-verificación (2026-10-21)", rev 2 en Engram.
+Fuente: `verify-report.md` (en esta carpeta), sección "Re-verificación (2026-10-21)", rev 2 en Engram.
 
 - Veredicto: **PASS WITH WARNINGS**. 0 CRITICAL, 3 WARNING, 5 SUGGESTION.
 - Gates: lint, boundaries, format, typecheck, test (web 87 suites / 1175 tests), test:cov (Branch 99.18), test:e2e, build con `check-out` OK, secretos limpios (scan-secrets y gitleaks).
 - Escenarios en la re-verificación: 70/71 PASS, 1 PARTIAL, 0 FAIL. Por requisito: 25 PASS, 2 PARTIAL.
 - El CRITICAL de la verificación original (evidencia TDD) quedó resuelto con `apply-progress.md`.
 
-## 5. Movimiento de la carpeta (pendiente, no ejecutado por este agente)
+## 5. Movimiento de la carpeta
 
-Este agente no dispone de comando de movimiento ni de borrado. Solo puede crear archivos. No se copió contenido para no duplicar artefactos. El orquestador debe ejecutar:
+La carpeta `openspec/changes/frontend-site/` se movió con `git mv` a `openspec/changes/archive/2026-10-21-frontend-site/`. El destino contiene `proposal.md`, `exploration.md`, `design.md`, `tasks.md`, `apply-progress.md`, `verify-report.md`, `specs/` (3 deltas) y este `archive-report.md`.
 
-```
-mv openspec/changes/frontend-site/proposal.md openspec/changes/frontend-site/exploration.md openspec/changes/frontend-site/design.md openspec/changes/frontend-site/tasks.md openspec/changes/frontend-site/apply-progress.md openspec/changes/frontend-site/verify-report.md openspec/changes/frontend-site/specs openspec/changes/archive/2026-10-21-frontend-site/
-rmdir openspec/changes/frontend-site
-```
-
-Después de eso, verificar que `openspec/changes/frontend-site/` ya no existe y que el destino contiene: `proposal.md`, `exploration.md`, `design.md`, `tasks.md`, `apply-progress.md`, `verify-report.md`, `specs/` (3 deltas) y este `archive-report.md`.
-
-Las specs de `openspec/specs/` ya son la fuente de verdad. Las copias delta que quedan en `specs/` hasta el movimiento son redundantes y no se deben editar.
+Las specs de `openspec/specs/` son la fuente de verdad. Las copias delta de `specs/` son historial y no se deben editar.
 
 ## 6. Trazabilidad (Engram, proyecto web_cv)
 
@@ -118,6 +111,4 @@ Escenarios PARTIAL citados en la re-verificación: "Menú móvil (cláusula 44 p
 ## 9. Riesgos del archivo
 
 - Ningún artefacto se perdió ni se sobrescribió con contenido distinto. Las specs nuevas son copias de los deltas con encabezados normalizados.
-- Riesgo operativo: hasta que el orquestador ejecute el movimiento de la sección 5, `openspec/changes/frontend-site/` y `openspec/changes/archive/2026-10-21-frontend-site/` coexisten con el archivo de informe.
 - No se tocaron otros cambios (`infra-spike`, `project-scaffold`, `stack-adrs`, `stack-decisions`).
-- No se ejecutó ningún comando de git.
