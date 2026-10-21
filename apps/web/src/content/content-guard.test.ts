@@ -8,7 +8,13 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
-import { findDocuments, moneyMatches, phoneMatches } from '@/test/contentRules';
+import { MOCK_ME } from '@/lib/api/mock/fixtures';
+import {
+  availabilityMatches,
+  findDocuments,
+  moneyMatches,
+  phoneMatches,
+} from '@/test/contentRules';
 
 const KAFKA_WITHOUT_SQS = /kafka(?! en local \/ SQS en producción)/i;
 
@@ -111,6 +117,12 @@ describe('money, phone and documents', () => {
     },
   );
 
+  it.each(shippedSource)('%s has no availability date', (name) => {
+    expect(
+      availabilityMatches(readFileSync(join(WEB_ROOT, name), 'utf8')),
+    ).toEqual([]);
+  });
+
   it('ships no PDF, Word or ODT document under apps/web', () => {
     expect(findDocuments(WEB_ROOT)).toEqual([]);
   });
@@ -154,6 +166,33 @@ describe('money, phone and documents', () => {
       expect(phoneMatches(text)).not.toEqual([]);
     });
 
+    it.each([
+      'Disponible desde el 1 de marzo',
+      'disponible inicio inmediato',
+      'Disponibilidad desde enero',
+      'Inicio: 01/03/2027',
+      'desde 1-3-27',
+      'Disponible a partir de marzo 2027',
+      'agosto de 2027',
+      'Start in January 2027',
+    ])('availability date: %j', (text) => {
+      expect(availabilityMatches(text)).not.toEqual([]);
+    });
+
+    it.each([
+      'Disponibilidad',
+      'Enlace no disponible',
+      '2000-01-01T00:00:00.000Z',
+      '2026-10-21',
+      'v1.2.3',
+      'next 16.2.100',
+      '2023 – 2024 · remoto',
+      'mayo es un mes',
+      'Node 24-15-1',
+    ])('availability ignores %j', (text) => {
+      expect(availabilityMatches(text)).toEqual([]);
+    });
+
     it('finds a document dropped in a temp tree, skipping build output', () => {
       const root = mkdtempSync(join(tmpdir(), 'content-guard-'));
       try {
@@ -172,4 +211,21 @@ describe('money, phone and documents', () => {
       }
     });
   });
+});
+
+describe('mock availability placeholders', () => {
+  const placeholders = Object.values(MOCK_ME.availability);
+
+  it('has placeholders to look for', () => {
+    expect(placeholders).toHaveLength(3);
+    for (const value of placeholders) expect(value).not.toBe('');
+  });
+
+  it.each(contentFiles)(
+    '%s never contains the mock availability values',
+    (name) => {
+      const raw = readFileSync(join(WEB_ROOT, name), 'utf8');
+      for (const value of placeholders) expect(raw).not.toContain(value);
+    },
+  );
 });

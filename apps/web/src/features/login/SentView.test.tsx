@@ -52,6 +52,8 @@ describe('SentView', () => {
     expect(link.getAttribute('href')).toMatch(
       /^\/acceso\/verificar\/?#token=mock-token$/,
     );
+    // "Reiniciar demo" belongs to the verify done state, never to sent.
+    expect(screen.queryByText(/Reiniciar demo/)).toBeNull();
     unmount();
 
     process.env.NEXT_PUBLIC_API_MODE = 'http';

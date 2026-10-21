@@ -2,6 +2,9 @@ import { render, screen } from '@testing-library/react';
 import { axe } from '@/test/axe';
 import { LinkButton } from './LinkButton';
 
+// Class assertions: CSS-module class names are identity-mapped in Jest, so
+// `toHaveClass('outline')` only proves the variant is wired. The visual result
+// is checked by the build and in the browser.
 describe('LinkButton', () => {
   it('renders a link with the given href', () => {
     render(<LinkButton href="/experiencia/">Experiencia</LinkButton>);

@@ -2,6 +2,7 @@ import { renderToString } from 'react-dom/server';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from '@/test/axe';
+import { createHttpGateway, type ResponseLike } from '@/lib/api/http';
 import type { ApiGateway } from '@/lib/api/port';
 import type { ApiResult, CvLink, Me, RawResponse } from '@/lib/api/types';
 import { RecruiterZone } from './RecruiterZone';
@@ -358,7 +359,7 @@ describe('RecruiterZone CV download', () => {
     expect(screen.getByRole('button', { name: 'Descargar PDF' })).toBeEnabled();
   });
 
-  it('refuses to open a URL that is not http(s)', async () => {
+  it('refuses to open a URL that is not https', async () => {
     const { openUrl, user } = setup({
       getCvLink: () =>
         Promise.resolve({
@@ -493,4 +494,53 @@ describe('RecruiterZone accessibility', () => {
       ).toHaveLength(1);
     },
   );
+});
+
+describe('RecruiterZone with the real http adapter', () => {
+  const reply = (status: number, body?: unknown): ResponseLike => ({
+    status,
+    ok: status >= 200 && status < 300,
+    statusText: `status ${status}`,
+    text: () => Promise.resolve(body === undefined ? '' : JSON.stringify(body)),
+  });
+
+  it('recovers the session: GET /me 401, refresh 200, retry 200, then shows the authorized view', async () => {
+    const calls: string[] = [];
+    let meCalls = 0;
+    const fetchImpl = (path: string, init: RequestInit) => {
+      const call = `${init.method ?? 'GET'} ${path}`;
+      calls.push(call);
+      if (call === 'GET /api/v1/me') {
+        meCalls += 1;
+        return Promise.resolve(meCalls === 1 ? reply(401) : reply(200, ME));
+      }
+      if (call === 'POST /api/auth/refresh') return Promise.resolve(reply(200));
+      return Promise.resolve(reply(200, { demo: true }));
+    };
+    const gateway = createHttpGateway(fetchImpl);
+    render(<RecruiterZone gatewayLoader={() => Promise.resolve(gateway)} />);
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Gracias por tu interés, equipo de Acme',
+      }),
+    ).toBeInTheDocument();
+    expect(calls.slice(0, 3)).toEqual([
+      'GET /api/v1/me',
+      'POST /api/auth/refresh',
+      'GET /api/v1/me',
+    ]);
+    expect(replace).not.toHaveBeenCalled();
+    expect(cardTitles()).toEqual(
+      expect.arrayContaining([
+        'CV completo',
+        'Contacto directo',
+        'Disponibilidad',
+      ]),
+    );
+    expect(
+      screen.getByRole('region', { name: 'Disponibilidad' }),
+    ).toHaveTextContent('API-MODALIDAD');
+  });
 });

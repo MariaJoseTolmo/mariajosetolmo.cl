@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { home } from '@/content/home';
 import { axe } from '@/test/axe';
 import { Hero } from './Hero';
 
@@ -48,5 +49,35 @@ describe('Hero', () => {
   it('has no axe violations', async () => {
     const { container } = render(<Hero />);
     expect(await axe(container)).toHaveNoViolations();
+  });
+
+  describe('when a call to action is missing', () => {
+    const original = [...home.hero.ctas];
+    const setCtas = (ctas: typeof home.hero.ctas) => {
+      (home.hero as { ctas: typeof home.hero.ctas }).ctas = ctas;
+    };
+    afterEach(() => setCtas(original));
+
+    it('renders only the secondary link when there is no primary one', () => {
+      setCtas([undefined, original[1]] as unknown as typeof home.hero.ctas);
+      render(<Hero />);
+      expect(
+        screen.queryByRole('link', { name: 'Solicitar CV completo' }),
+      ).toBeNull();
+      expect(
+        screen.getByRole('link', { name: 'Ver experiencia' }),
+      ).toBeInTheDocument();
+    });
+
+    it('renders only the primary link when there is no secondary one', () => {
+      setCtas([original[0]] as unknown as typeof home.hero.ctas);
+      render(<Hero />);
+      expect(
+        screen.getByRole('link', { name: 'Solicitar CV completo' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'Ver experiencia' }),
+      ).toBeNull();
+    });
   });
 });
