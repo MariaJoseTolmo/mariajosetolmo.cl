@@ -89,20 +89,21 @@ PR 5, 6 y 7 pueden prepararse en paralelo en ramas distintas, pero se mergean en
 
 ## PR 3: Contenido base y navegación (~380)
 
-- [ ] 3.1 RED→GREEN: `src/content/types.ts` y `site.ts` (nav de 5 ítems en orden, contacto público, pie «María José Tolmo Tolmo»).
-- [ ] 3.2 RED: `SiteHeader.test.tsx` (nav idéntica entre páginas, `aria-current="page"` solo en la ruta actual, logo a `/`, variantes `public|minimal|session`). GREEN: `SiteHeader`.
-- [ ] 3.3 RED: `MobileMenu.test.tsx` (`aria-expanded`, `aria-controls` resuelve a un id existente, Escape cierra y devuelve foco, `user-event`). GREEN: `MobileMenu` (`'use client'`).
-- [ ] 3.4 RED→GREEN: `Footer` (nombre correcto; sin teléfono fuera de `site.ts`).
-- [ ] 3.5 Axe en las tres variantes; REFACTOR.
-- [ ] 3.6 CIERRE (`gitleaks dir apps/web/src/content apps/web/src/components/layout`).
+- [x] 3.1 RED→GREEN: `src/content/types.ts` y `site.ts` (nav de 5 ítems en orden, contacto público, pie «María José Tolmo Tolmo»).
+- [x] 3.2 RED: `SiteHeader.test.tsx` (nav idéntica entre páginas, `aria-current="page"` solo en la ruta actual, logo a `/`, variantes `public|minimal|session`). GREEN: `SiteHeader`.
+- [x] 3.3 RED: `MobileMenu.test.tsx` (`aria-expanded`, `aria-controls` resuelve a un id existente, Escape cierra y devuelve foco, `user-event`). GREEN: `MobileMenu` (`'use client'`).
+- [x] 3.4 RED→GREEN: `Footer` (nombre correcto; sin teléfono fuera de `site.ts`).
+- [x] 3.5 Axe en las tres variantes; REFACTOR.
+- [x] 3.6 CIERRE (`gitleaks dir apps/web/src/content apps/web/src/components/layout`).
 
 ## PR 4: Inicio A (~390)
 
-- [ ] 4.1 RED→GREEN: `highlightJson.ts` + `CodeWindow` (solo `--color-green` y `--color-code-string`).
-- [ ] 4.2 RED→GREEN: `Hero` (eyebrow, `h1`, lead, 2 CTAs, tarjeta `GET /api/v1/profile` rotulada como ejemplo).
-- [ ] 4.3 RED→GREEN: `Contributions` («Lo que aporto») y `StackSection` (4 columnas; AWS en «Aprendiendo» con «aprendiendo, aplicado en este proyecto»; sin cifras). Contenido en `home.ts`/`stack.ts`.
-- [ ] 4.4 Kafka siempre con «Kafka en local / SQS en producción» (test de bloque de texto).
-- [ ] 4.5 CIERRE (`gitleaks dir apps/web/src/features/home apps/web/src/content`).
+- [x] 4.1 RED→GREEN: `highlightJson.ts` + `CodeWindow` (solo `--color-green` y `--color-code-string`).
+- [x] 4.2 RED→GREEN: `Hero` (eyebrow, `h1`, lead, 2 CTAs, tarjeta `GET /api/v1/profile` rotulada como ejemplo).
+- [x] 4.3 RED→GREEN: `Contributions` («Lo que aporto») y `StackSection` (4 columnas; AWS en «Aprendiendo» con «aprendiendo, aplicado en este proyecto»; sin cifras). Contenido en `home.ts`/`stack.ts`.
+- [x] 4.4 Kafka siempre con «Kafka en local / SQS en producción» (test de bloque de texto).
+- [x] 4.5 CIERRE (`gitleaks dir apps/web/src/features/home apps/web/src/content`).
+  - Nota (apply B): `app/page.tsx` ya compone SiteHeader + Hero + Contributions + StackSection + Footer para poder previsualizar; 5.2 completa el orden y las anclas `#proyectos`/`#como` (hasta entonces esos dos enlaces de la nav no tienen destino). El teléfono no se incluyó en `site.ts` (no se usa en Inicio; entra con la tarjeta de contacto del PR 10).
 
 ## PR 5: Inicio B y página `/` (~330)
 

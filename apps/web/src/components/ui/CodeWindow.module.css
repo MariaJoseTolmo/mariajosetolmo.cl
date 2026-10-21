@@ -1,0 +1,47 @@
+.window {
+  margin: 0;
+  overflow: hidden;
+  border-radius: var(--radius-12);
+  background: var(--color-ink);
+  color: var(--color-on-dark);
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--color-dark-border);
+  color: var(--color-on-dark-muted);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 13px;
+}
+
+.method,
+.status,
+.key {
+  color: var(--color-green);
+}
+
+.note {
+  margin: 0;
+  padding: 12px 20px 0;
+  color: var(--color-on-dark-muted);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 12.5px;
+}
+
+.code {
+  margin: 0;
+  padding: 22px 20px 26px;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 14.5px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.string {
+  color: var(--color-code-string);
+}

@@ -124,7 +124,7 @@ No hay `test:e2e`.
 - `--space-section` y sus variantes (88/96/80/72/56) y `--tap-{44,48,52}`.
 - `--focus-ring: 2px solid var(--color-accent)`.
 
-Hay un solo breakpoint: `@media (min-width: 761px)`, mobile-first.
+Hay un solo breakpoint: `@media (min-width: 761px)`, mobile-first. Excepción: el header (SiteHeader/MobileMenu) cambia a la nav completa en `min-width: 900px` para evitar que la nav se parta en dos filas entre 761 y ~850px.
 
 **Regla "sin hex fuera de `tokens.css`"** (sin stylelint, que sería tecnología nueva):
 
