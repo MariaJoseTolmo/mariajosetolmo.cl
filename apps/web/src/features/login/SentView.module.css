@@ -1,0 +1,31 @@
+.view {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.text {
+  margin: 0;
+  color: var(--color-ink-2);
+  font-size: 16px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.email {
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}

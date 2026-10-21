@@ -90,6 +90,22 @@ describe('SiteHeader minimal variant', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 
+  it('offers a back link to the home page', () => {
+    render(<SiteHeader variant="minimal" />);
+    expect(
+      screen.getByRole('link', { name: 'Volver al inicio' }),
+    ).toHaveAttribute('href', '/');
+  });
+
+  it('does not render the back link in the other variants', () => {
+    const { rerender } = render(
+      <SiteHeader variant="public" currentPath="/" />,
+    );
+    expect(screen.queryByRole('link', { name: 'Volver al inicio' })).toBeNull();
+    rerender(<SiteHeader variant="session" />);
+    expect(screen.queryByRole('link', { name: 'Volver al inicio' })).toBeNull();
+  });
+
   it('has no axe violations', async () => {
     const { container } = render(<SiteHeader variant="minimal" />);
     expect(await axe(container)).toHaveNoViolations();

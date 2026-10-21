@@ -106,3 +106,43 @@ export interface ExperienceContent {
   education: { title: string; items: EducationItem[] };
   cta: { title: string; action: ContactLink };
 }
+
+export interface LoginStep {
+  id: string;
+  endpoint: string;
+  detail: string;
+}
+
+export interface LoginContent {
+  form: {
+    eyebrow: string;
+    title: string;
+    lead: string;
+    emailLabel: string;
+    emailPlaceholder: string;
+    companyLabel: string;
+    companyPlaceholder: string;
+    nameLabel: string;
+    namePlaceholder: string;
+    submit: string;
+    submitting: string;
+    privacy: string;
+    emailEmpty: string;
+    emailInvalid: string;
+    networkError: string;
+  };
+  sent: {
+    eyebrow: string;
+    title: string;
+    /** Rendered as `{before}<strong>{email}</strong>{after}`. */
+    before: string;
+    after: string;
+    reset: string;
+  };
+  steps: {
+    eyebrow: string;
+    title: string;
+    items: LoginStep[];
+    footnote: string;
+  };
+}

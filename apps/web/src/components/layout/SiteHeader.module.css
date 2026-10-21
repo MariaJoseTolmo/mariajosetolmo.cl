@@ -29,6 +29,16 @@
   color: var(--color-accent);
 }
 
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--tap-44);
+  color: var(--color-ink);
+  font-size: 15px;
+  text-decoration: none;
+}
+
 .links {
   display: none;
 }
