@@ -1,4 +1,5 @@
 import { MOCK_TOKEN } from '../mock-token';
+import { isPlaygroundEndpoint } from '../playground-endpoints';
 import type { ApiGateway } from '../port';
 import type { ApiResult } from '../types';
 import { failure } from '../errors';
@@ -40,6 +41,9 @@ export function createMockGateway(): ApiGateway {
       return Promise.resolve(OK);
     },
     call(endpoint) {
+      if (!isPlaygroundEndpoint(endpoint)) {
+        return Promise.resolve(failure('unexpected'));
+      }
       if (!hasSession()) return Promise.resolve(failure('unauthorized'));
       if (endpoint === '/api/v1/admin/visits') {
         return Promise.resolve({

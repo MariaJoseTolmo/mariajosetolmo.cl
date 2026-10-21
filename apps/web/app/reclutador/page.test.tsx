@@ -1,4 +1,5 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { axe } from '@/test/axe';
 import RecruiterPage, { metadata } from './page';
 
@@ -25,6 +26,19 @@ describe('recruiter page', () => {
     expect(replace).toHaveBeenCalledWith('/acceso/');
   });
 
+  it('plays the API with the mock gateway: 200 first, 403 for admin/visits', async () => {
+    process.env.NEXT_PUBLIC_API_MODE = 'mock';
+    window.sessionStorage.setItem('web-cv-mock-session', '1');
+    render(<RecruiterPage />);
+    const figure = await screen.findByRole('figure');
+    await waitFor(() => expect(figure).toHaveTextContent('200 OK'));
+    await userEvent.click(
+      screen.getByRole('button', { name: /admin\/visits/ }),
+    );
+    await waitFor(() => expect(figure).toHaveTextContent('403 Forbidden'));
+    expect(figure).toHaveTextContent('/api/v1/admin/visits');
+  });
+
   it('shows the zone for a visitor with a session and passes axe', async () => {
     process.env.NEXT_PUBLIC_API_MODE = 'mock';
     window.sessionStorage.setItem('web-cv-mock-session', '1');
@@ -35,7 +49,7 @@ describe('recruiter page', () => {
         name: /Gracias por tu interés/,
       }),
     ).toBeInTheDocument();
-    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(3);
+    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(4);
     expect(replace).not.toHaveBeenCalled();
     await act(() => new Promise((resolve) => setTimeout(resolve, 20)));
     expect(await axe(container)).toHaveNoViolations();

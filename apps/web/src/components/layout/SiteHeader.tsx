@@ -34,7 +34,7 @@ export function SiteHeader({
         {variant === 'public' ? (
           <>
             <nav className={styles.links} aria-label="Principal">
-              <ul className={styles.list}>
+              <ul role="list" className={styles.list}>
                 {site.nav.map((item) => {
                   const current = isCurrentRoute(item.href, currentPath)
                     ? 'page'

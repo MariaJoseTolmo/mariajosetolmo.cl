@@ -33,4 +33,15 @@ export const recruiter: RecruiterContent = {
     logout: 'Cerrar sesión',
     logoutFailed: 'No pudimos cerrar la sesión. Inténtalo de nuevo.',
   },
+  playground: {
+    eyebrow: 'API Playground',
+    title: 'Prueba la API que alimenta este sitio',
+    lead: 'Elige un endpoint. Tu sesión ya incluye el JWT, así que también funcionan los privados.',
+    groupLabel: 'Endpoints',
+    loading: 'Cargando respuesta…',
+    loadingStatus: 'Cargando…',
+    failed:
+      'No pudimos obtener la respuesta. Vuelve a elegir el endpoint para reintentar.',
+    failedStatus: 'Sin respuesta',
+  },
 };

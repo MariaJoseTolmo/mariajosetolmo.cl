@@ -10,6 +10,7 @@ const ALLOWED = [
   'src/features/login/LoginContainer.tsx',
   'src/features/login/VerifyContainer.tsx',
   'src/features/recruiter/RecruiterZone.tsx',
+  'src/features/recruiter/playground/ApiPlayground.tsx',
 ];
 
 function walk(dir: string): string[] {

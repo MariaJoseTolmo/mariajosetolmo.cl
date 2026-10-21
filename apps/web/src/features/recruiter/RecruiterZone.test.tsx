@@ -3,7 +3,7 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from '@/test/axe';
 import type { ApiGateway } from '@/lib/api/port';
-import type { ApiResult, CvLink, Me } from '@/lib/api/types';
+import type { ApiResult, CvLink, Me, RawResponse } from '@/lib/api/types';
 import { RecruiterZone } from './RecruiterZone';
 
 const replace = jest.fn();
@@ -38,11 +38,16 @@ function setup(overrides: Partial<ApiGateway> = {}, openUrl = jest.fn()) {
       Promise.resolve({ ok: true as const, data: LINK }),
     ),
     logout: jest.fn(() => Promise.resolve(OK)),
+    call: jest.fn((): Promise<ApiResult<RawResponse>> =>
+      Promise.resolve({
+        ok: true,
+        data: { status: 200, statusText: 'OK', body: { demo: true } },
+      }),
+    ),
   };
   const gateway: ApiGateway = {
     requestMagicLink: unused,
     verifyToken: unused,
-    call: unused,
     ...mocks,
     ...overrides,
   };
@@ -56,6 +61,31 @@ function setup(overrides: Partial<ApiGateway> = {}, openUrl = jest.fn()) {
 
 const cardTitles = () =>
   screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
+
+describe('RecruiterZone playground', () => {
+  it('mounts the playground only once authorized, with five endpoints', async () => {
+    const { call } = setup();
+    expect(screen.queryByRole('group', { name: 'Endpoints' })).toBeNull();
+    const group = await screen.findByRole('group', { name: 'Endpoints' });
+    expect(within(group).getAllByRole('button')).toHaveLength(5);
+    await waitFor(() => expect(call).toHaveBeenCalledWith('/api/v1/profile'));
+  });
+
+  it('never requests endpoints while the session is being checked', async () => {
+    const { call } = setup({
+      getMe: () => Promise.resolve({ ok: false, error: 'network' }),
+    });
+    await screen.findByRole('button', { name: 'Reintentar' });
+    expect(call).not.toHaveBeenCalled();
+  });
+
+  it('sends the visitor to /acceso/ when the playground finds no session', async () => {
+    setup({
+      call: () => Promise.resolve({ ok: false, error: 'unauthorized' }),
+    });
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/acceso/'));
+  });
+});
 
 describe('RecruiterZone session guard', () => {
   it('shows "Verificando sesión" and no protected content while checking', () => {
@@ -193,13 +223,14 @@ describe('RecruiterZone content', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows exactly the three cards, without Word or scheduling', async () => {
+  it('shows exactly the three cards and the playground, without Word or scheduling', async () => {
     const { container } = setup();
     await screen.findByText(/Gracias por tu interés/);
     expect(cardTitles()).toEqual([
       'CV completo',
       'Contacto directo',
       'Disponibilidad',
+      'Prueba la API que alimenta este sitio',
     ]);
     expect(container).not.toHaveTextContent(
       /Word|\.docx|Agendar|Proponer horario/,
@@ -293,7 +324,12 @@ describe('RecruiterZone CV download', () => {
     await user.click(button);
     expect(button).toHaveFocus();
     expect(button).toHaveAttribute('aria-disabled', 'true');
-    expect(screen.getByRole('status')).toHaveTextContent('Preparando…');
+    // The playground has its own live region: scope to the CV card.
+    expect(
+      within(screen.getByRole('region', { name: 'CV completo' })).getByRole(
+        'status',
+      ),
+    ).toHaveTextContent('Preparando…');
   });
 
   it('allows downloading again after a failure', async () => {

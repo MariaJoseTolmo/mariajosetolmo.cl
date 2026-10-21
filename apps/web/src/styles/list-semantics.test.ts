@@ -10,6 +10,9 @@ const RESTYLED_LISTS = [
   'features/home/ArchitectureSection',
   'features/login/StepsPanel',
   'features/recruiter/ContactCard',
+  'components/layout/SiteHeader',
+  'components/layout/MobileMenu',
+  'features/home/StackSection',
 ];
 
 describe('lists restyled with list-style: none', () => {

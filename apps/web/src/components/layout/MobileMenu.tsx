@@ -81,7 +81,7 @@ export function MobileMenu({ items, currentPath }: MobileMenuProps) {
         aria-label="Menú móvil"
         hidden={!open}
       >
-        <ul className={styles.list}>
+        <ul role="list" className={styles.list}>
           {items.map((item) => (
             <li
               key={item.href}

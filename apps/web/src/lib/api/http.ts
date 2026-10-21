@@ -1,5 +1,6 @@
 import { errorFromStatus, failure, type ErrorContext } from './errors';
 import type { ApiGateway } from './port';
+import { isPlaygroundEndpoint } from './playground-endpoints';
 import type {
   ApiResult,
   CvLink,
@@ -201,6 +202,7 @@ export function createHttpGateway(
     getCvLink: () => expectData('/api/v1/cv', isCvLink),
     logout: () => expectVoid('POST', '/api/auth/logout'),
     async call(endpoint: PlaygroundEndpoint): Promise<ApiResult<RawResponse>> {
+      if (!isPlaygroundEndpoint(endpoint)) return failure('unexpected');
       const outcome = await request('GET', endpoint);
       if ('failed' in outcome) return outcome.failed;
       const { response } = outcome;

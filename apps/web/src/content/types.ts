@@ -174,6 +174,13 @@ export interface VerifyContent {
   retry: string;
 }
 
+export interface NotFoundContent {
+  eyebrow: string;
+  title: string;
+  text: string;
+  action: NavLink;
+}
+
 export interface RecruiterContent {
   checking: { title: string };
   error: { title: string; text: string; retry: string };
@@ -194,4 +201,14 @@ export interface RecruiterContent {
     salary: string;
   };
   session: { logout: string; logoutFailed: string };
+  playground: {
+    eyebrow: string;
+    title: string;
+    lead: string;
+    groupLabel: string;
+    loading: string;
+    loadingStatus: string;
+    failed: string;
+    failedStatus: string;
+  };
 }
