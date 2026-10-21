@@ -40,13 +40,16 @@ describe('home page (smoke)', () => {
     expect(container.querySelectorAll('[aria-current]')).toHaveLength(0);
   });
 
-  it('orders header, hero, contributions, stack and footer', () => {
+  it('orders header, hero, contributions, stack, projects, architecture, cta and footer', () => {
     const { container } = render(<Page />);
     const order = [
       'header',
       'main h1',
       'main #aporte',
       'main #stack-h',
+      'main #proyectos',
+      'main #como',
+      'main #cta-band-h',
       'footer',
     ].map((selector) => container.querySelector(selector));
     order.forEach((el) => expect(el).not.toBeNull());
@@ -58,9 +61,34 @@ describe('home page (smoke)', () => {
     }
   });
 
-  it('exposes the #stack anchor used by the nav', () => {
+  it.each(['proyectos', 'stack', 'como'])(
+    'exposes exactly one #%s anchor used by the nav',
+    (id) => {
+      const { container } = render(<Page />);
+      expect(container.querySelectorAll(`#${id}`)).toHaveLength(1);
+    },
+  );
+
+  it('links the architecture chips to the real endpoints', () => {
     const { container } = render(<Page />);
-    expect(container.querySelectorAll('#stack')).toHaveLength(1);
+    const hrefs = Array.from(container.querySelectorAll('a')).map((a) =>
+      a.getAttribute('href'),
+    );
+    expect(hrefs).toEqual(expect.arrayContaining(['/api/docs', '/api/health']));
+    for (const href of hrefs) {
+      expect(href).not.toMatch(/\/status|\/api-docs/);
+    }
+  });
+
+  it('closes with the access call to action', () => {
+    render(<Page />);
+    const cta = screen.getByRole('region', {
+      name: '¿Buscas una desarrolladora backend Node.js?',
+    });
+    expect(within(cta).getByRole('link')).toHaveAttribute(
+      'href',
+      expect.stringMatching(/^\/acceso\/?$/),
+    );
   });
 
   it('shows the footer name', () => {

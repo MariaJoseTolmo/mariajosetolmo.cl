@@ -1,0 +1,114 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: var(--space-section) 24px;
+}
+
+.flow {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.node,
+.nodeEmphasis {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-10);
+  background: var(--color-surface);
+}
+
+.nodeEmphasis {
+  border: 2px solid var(--color-accent);
+}
+
+.label {
+  color: var(--color-muted);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 12px;
+}
+
+.nodeEmphasis .label {
+  color: var(--color-accent);
+}
+
+.nodeTitle {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.nodeText {
+  margin: 0;
+  color: var(--color-ink-2);
+  font-size: 14px;
+}
+
+/* Decorative arrows live in CSS so the list keeps exactly one item per node. */
+.node:not(:last-child)::after,
+.nodeEmphasis:not(:last-child)::after {
+  content: '→';
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  color: var(--color-muted);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  line-height: 1;
+  transform: translate(-50%, 50%) rotate(90deg);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-44);
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-8);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+@media (min-width: 761px) {
+  .flow {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .node {
+    flex: 1 1 200px;
+  }
+
+  .nodeEmphasis {
+    flex: 1.6 1 280px;
+  }
+
+  .node:not(:last-child)::after,
+  .nodeEmphasis:not(:last-child)::after {
+    top: 50%;
+    right: -12px;
+    bottom: auto;
+    left: auto;
+    transform: translate(50%, -50%);
+  }
+}

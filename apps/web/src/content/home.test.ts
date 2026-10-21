@@ -30,3 +30,41 @@ describe('stack content', () => {
     ]);
   });
 });
+
+describe('architecture content', () => {
+  const { architecture } = home;
+
+  it('describes frontend, api and data in order, with the api emphasized', () => {
+    expect(architecture.nodes.map((n) => [n.id, n.emphasis ?? false])).toEqual([
+      ['frontend', false],
+      ['api', true],
+      ['datos', false],
+    ]);
+  });
+
+  it('keeps the diagram copy honest about hosting', () => {
+    const copy = architecture.nodes
+      .map((n) => `${n.title} ${n.text}`)
+      .join(' ');
+    expect(copy).toContain('Next.js estático');
+    expect(copy).toContain('S3 + CloudFront');
+    expect(copy).toContain('NestJS · hexagonal');
+    expect(copy).toContain('AWS Lambda');
+    expect(copy).toContain('PostgreSQL · Redis');
+  });
+
+  it('presents AWS as something being learned, with the agreed lead', () => {
+    expect(architecture.lead).toBe(
+      'Sitio estático servido por CloudFront y una API NestJS propia en AWS Lambda. AWS es lo que estoy aprendiendo, aplicado en este proyecto. Puedes revisar la documentación de los endpoints y el estado de la API.',
+    );
+    expect(architecture.lead).toContain('aprendiendo');
+  });
+
+  it('links the chips to the real endpoints and the repository', () => {
+    expect(architecture.chips.map((c) => c.href)).toEqual([
+      '/api/docs',
+      '/api/health',
+      'https://github.com/MariaJoseTolmo/mariajosetolmo.cl',
+    ]);
+  });
+});
