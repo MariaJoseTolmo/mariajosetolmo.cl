@@ -28,48 +28,39 @@ Reglas:
 | Capa | Tecnología | Por qué | Relación con mi CV |
 |---|---|---|---|
 | Frontend | Next.js con SSG puro (`output: 'export'`) en S3 + CloudFront; la zona reclutador se renderiza en el cliente; el CI reconstruye cuando cambia el contenido | El contenido público casi no cambia: carga instantánea y costo casi cero | Nueva (ADR) |
-| Entrada | Un solo dominio en CloudFront: `/api/*` → origen de la API (mecanismo a definir, ver pendiente 5) | Cookies same-origin, sin CORS | Nueva (ADR) |
+| Entrada | Un solo dominio (`mariajosetolmo.cl`) en CloudFront: `/api/*` → origen de la API protegido con OAC (ver decisión 5) | Cookies same-origin, sin CORS | Nueva (ADR) |
 | API | NestJS + TypeScript, arquitectura hexagonal, prefijo global `/api` | Mi stack principal | Avanzado |
-| Runtime | AWS Lambda: bundle con esbuild, instancia de la app cacheada, adaptador HTTP (ver pendiente 3) | Paga por uso; el dominio no sabe que corre en Lambda | AWS en aprendizaje (ADR) |
-| Datos | PostgreSQL serverless + TypeORM; migraciones por conexión directa (sin pooler) | Postgres real, apto para Lambda | Avanzado |
+| Runtime | AWS Lambda Web Functions (Node 24, arm64): el servidor NestJS escucha en `AWS_LAMBDA_HTTP_ENDPOINT`, sin adaptador HTTP; condicionado al infra-spike (Plan B: Function URL + Lambda Web Adapter). El bundle debe conservar la metadata de decoradores (tsc/SWC, no esbuild solo) | Paga por uso; el dominio no sabe que corre en Lambda | AWS en aprendizaje (ADR) |
+| Datos | PostgreSQL serverless en Neon (us-east-1) + TypeORM; migraciones por conexión directa (sin pooler) | Postgres real, apto para Lambda | Avanzado |
 | Caché / sesiones | Redis: Upstash en producción, Docker en local | Tokens del magic link con TTL y rate limit, sin VPC ni NAT Gateway | En producción (ADR solo por el proveedor) |
-| Eventos | Puerto `EventPublisher`: adaptador Kafka en local, Amazon SQS en producción | MSK cuesta ~USD 558/mes (fuente: aws.amazon.com/msk/pricing); mismo puerto, distinto adaptador | Kafka en producción; SQS nuevo (ADR) |
+| Eventos | Puerto `EventPublisher`: adaptador Kafka en local, Amazon SQS en producción | MSK Serverless cuesta ~USD 558/mes y el MSK aprovisionado mínimo (2 brokers `kafka.m5.large`) ~USD 307/mes (fuente: aws.amazon.com/msk/pricing); mismo puerto, distinto adaptador | Kafka en producción; SQS nuevo (ADR) |
 | Correo | Amazon SES + DKIM/SPF/DMARC; Mailpit en local; rebotes vía SNS | Entregabilidad del magic link | Nueva (ADR) |
 | Auth | Magic link + JWT RS256 (15 min) + refresh rotativo (7 días), guards por rol (RECRUITER, ADMIN), endpoint JWKS público | Según el diseño | JWT/OAuth en producción |
 | Secretos | AWS SSM Parameter Store (SecureString) | Llaves fuera del repo, sin costo | Nueva (ADR) |
-| Infraestructura | Infraestructura como código en TypeScript (ver pendiente 2) | Entorno reproducible y versionado | Nueva (ADR) |
+| Infraestructura | AWS CDK en TypeScript (L1 para Web Functions) | Entorno reproducible y versionado | Nueva (ADR) |
 | CI/CD | GitHub Actions con OIDC hacia AWS | Despliegue sin llaves de AWS guardadas | En producción |
 | Docs API | Swagger en `/api/docs` (bajo el prefijo `/api`, así CloudFront lo enruta sin un behavior extra) | Según el diseño | En producción |
 | Tests | Jest (unitarios y de integración) + E2E del flujo de login | Según el diseño | En producción |
 | Local | docker-compose: Postgres, Redis, Kafka, Mailpit | Desarrollo sin depender de la nube | Docker en producción |
 
-## Decisiones pendientes: compararlas en la exploración
-Verificá cada dato en documentación oficial y citá la fuente.
-1. **PostgreSQL serverless: Neon vs Supabase.** Criterios: plan gratuito vigente, pooler compatible con Lambda,
-   compatibilidad de TypeORM con el pooler en modo transacción (prepared statements), latencia hacia la región de AWS,
-   comportamiento cuando la base "se duerme".
-2. **IaC: SST vs AWS CDK.** Como no hay ISR ni SSR, el criterio central es publicar un sitio estático en S3 + CloudFront
-   con `/api/*` hacia la API. También: soporte del mecanismo elegido en el pendiente 5, curva de aprendizaje, valor en el mercado laboral.
-3. **Adaptador HTTP: Lambda Web Adapter vs @codegenie/serverless-express.** Criterios: cold start, manejo de cookies y binarios (PDF),
-   paridad local/Lambda, compatibilidad con el origen elegido en el pendiente 5.
-4. **Región de AWS** para Lambda, SES y la base, pensando en usuarios de Chile.
-5. **Protección del origen `/api`** (nadie puede llamar a la API saltándose CloudFront):
-   - a) API Gateway + header secreto que CloudFront agrega y la API valida; endpoint `execute-api` por defecto desactivado si es posible.
-   - b) Lambda Function URL + OAC (sin API Gateway). Verificar: los POST/PUT requieren que el cliente envíe `x-amz-content-sha256`,
-     lo que afecta al formulario del magic link.
-   - c) Lambda Web Functions + OAC (sin API Gateway; anunciado el 12-10-2026). Verificar: soporte en SST/CDK, madurez,
-     disponibilidad en la región elegida, firma `UNSIGNED-PAYLOAD` en POST.
-   Si se elige b) o c), actualizar la fila "Entrada" y sacar API Gateway del stack.
+## Decisiones resueltas (2026-10-20)
+Comparadas en `openspec/changes/stack-decisions/exploration.md`; cada una con su ADR en `openspec/changes/stack-adrs/`.
+1. **PostgreSQL serverless:** Neon (Supabase Free se pausa tras una semana). La región es inmutable: el proyecto se crea solo después del spike. TypeORM detrás del pooler en modo transacción queda por verificar.
+2. **IaC:** AWS CDK en TypeScript (L1 para Web Functions).
+3. **Adaptador HTTP:** ninguno con Web Functions (el servidor escucha en `AWS_LAMBDA_HTTP_ENDPOINT`). Con el Plan B, Lambda Web Adapter.
+4. **Región:** us-east-1 para todo (Web Functions no existe en sa-east-1). La latencia desde Chile se mide en el spike.
+5. **Protección del origen `/api`:** c) Lambda Web Functions + CloudFront OAC (`always-amz-auth`, POST con `UNSIGNED-PAYLOAD`), **condicionada al infra-spike**. Plan B: b) Function URL + OAC, que obliga al cliente a enviar `x-amz-content-sha256`. API Gateway queda fuera del stack.
 
 ## Requisitos de seguridad (repo público en GitHub)
 - `.gitignore` desde el primer commit; gitleaks en pre-commit; push protection de GitHub activada.
 - Ningún dato personal en el repo: renta, disponibilidad y CV en PDF/Word se guardan en la base o en un bucket S3 privado.
   El teléfono es público por decisión consciente (aparece en `Diseño/html/`, que se versiona).
   El CV se entrega con una URL firmada que expira. Los seeds del repo usan datos falsos.
-- Ningún código, nombre de cliente ni endpoint de empleadores anteriores. El caso de estudio de migración se reconstruye con un dominio inventado.
+- Ningún código ni endpoint de empleadores anteriores. El caso de estudio de migración se reconstruye con un dominio inventado.
+  Los nombres de empleadores (Accenture, Kabeli, Amecs) y el cliente "Banco Itaú" se muestran por decisión consciente de la dueña del CV.
 - GitHub Actions: OIDC, rol de deploy limitado a `main` y con permisos mínimos, actions fijadas por SHA, sin `pull_request_target`.
 - Dependabot y protección de rama en `main`.
-- El origen `/api` no se puede invocar sin pasar por CloudFront (pendiente 5).
+- El origen `/api` no se puede invocar sin pasar por CloudFront (decisión 5; el spike verifica el 403 en la llamada directa).
 - El rate limit toma la IP de `CloudFront-Viewer-Address` (la origin request policy debe reenviarlo); nunca de `X-Forwarded-For`.
 - El rate limit se guarda en Redis (Upstash), nunca en memoria: cada instancia de Lambda tiene su propia memoria.
 - Cookies HttpOnly, Secure, SameSite=Strict + validación del header `Origin` en métodos mutantes.
