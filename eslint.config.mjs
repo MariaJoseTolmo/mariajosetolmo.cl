@@ -1,6 +1,7 @@
 import js from '@eslint/js';
 import { defineConfig } from 'eslint/config';
 import prettier from 'eslint-config-prettier';
+import nextVitals from 'eslint-config-next/core-web-vitals';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
@@ -57,10 +58,20 @@ export const applicationRestrictions = {
   ],
 };
 
+const webFiles = ['apps/web/**/*.{ts,tsx}'];
+
 export default defineConfig(
   {
     // 'Dise*' because 'Diseño' does not match under macOS unicode normalization.
-    ignores: ['spikes/**', 'Dise*/**', '**/dist/**', '**/coverage/**'],
+    ignores: [
+      'spikes/**',
+      'Dise*/**',
+      '**/dist/**',
+      '**/coverage/**',
+      'apps/web/.next/**',
+      'apps/web/out/**',
+      'apps/web/next-env.d.ts',
+    ],
   },
   js.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
@@ -78,8 +89,13 @@ export default defineConfig(
     languageOptions: { globals: globals.node },
   },
   {
+    files: ['**/*.test.js'],
+    languageOptions: { globals: globals.jest },
+  },
+  {
     files: ['**/*.js'],
     languageOptions: { sourceType: 'commonjs' },
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
   {
     files: ['apps/api/src/**/domain/**/*.ts'],
@@ -88,6 +104,20 @@ export default defineConfig(
   {
     files: ['apps/api/src/**/application/**/*.ts'],
     rules: { 'no-restricted-imports': ['error', applicationRestrictions] },
+  },
+  ...nextVitals.map((config) => ({ ...config, files: webFiles })),
+  {
+    files: webFiles,
+    settings: { next: { rootDir: 'apps/web' } },
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'JSXAttribute[name.name="style"]',
+          message: 'Inline styles are not allowed; use CSS Modules.',
+        },
+      ],
+    },
   },
   prettier,
 );
