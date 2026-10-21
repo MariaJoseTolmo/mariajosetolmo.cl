@@ -24,7 +24,7 @@ Nadie debe poder llamar a la API saltándose CloudFront (rate limit, cabeceras, 
 | b) Function URL + OAC (**Plan B**) | Madura; cualquier región; `FunctionUrlOrigin.withOriginAccessControl` | El navegador debe enviar `x-amz-content-sha256` en POST/PUT; requiere Lambda Web Adapter |
 | a) API Gateway + header secreto | Madura; cualquier región | Secreto compartido (más débil); ~USD 1.00/M solicitudes; requiere adaptador |
 
-**Plan B:** `NodejsFunction` + Lambda Web Adapter (layer `arn:aws:lambda:us-east-1:753240598075:layer:LambdaAdapterLayerArm64:30` según el README de `main`; la última release del repositorio es v1.1.0, publicada el 2026-09-18; confirmar la versión de la layer al implementar) + Function URL `AWS_IAM` + OAC, con un wrapper `crypto.subtle` de ~10 líneas en el cliente.
+**Plan B:** `NodejsFunction` + Lambda Web Adapter (layer `LambdaAdapterLayerArm64` versión 30, publicada por AWS Labs; el ARN exacto está en el README de `awslabs/aws-lambda-web-adapter`; la última release del repositorio es v1.1.0, publicada el 2026-09-18; confirmar la versión de la layer al implementar) + Function URL `AWS_IAM` + OAC, con un wrapper `crypto.subtle` de ~10 líneas en el cliente.
 
 ## Go/no-go (infra-spike)
 
