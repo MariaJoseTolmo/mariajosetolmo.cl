@@ -13,14 +13,21 @@
 | Estrategia de entrega | ask-on-risk |
 | Estrategia de cadena | stacked-to-main |
 
-Decision needed before apply: Yes
+Decision needed before apply: No (resuelta el 2026-10-20)
 Chained PRs recommended: Yes
 Chain strategy: stacked-to-main
-400-line budget risk: High
+400-line budget risk: High (aceptado con `size:exception`)
 
-**Decisión pendiente de la usuaria (no se asume):**
-- **Opción A, 12 PRs ≤ 400 líneas:** cada uno se revisa en ≤ 60 min y se revierte solo. Más PRs y más CI, pero cumple la regla sin excepciones.
-- **Opción B, `size:exception`:** menos PRs (p. ej. 3-4, agrupando por capa) con aprobación explícita de mantenedora. Menos fricción, pero diffs de ~1.000 líneas y reversión más gruesa.
+**Decisión de la usuaria (2026-10-20): `size:exception` con 6 PRs agrupados de a pares.** Las 12 unidades de trabajo de abajo se mantienen como orden de tareas y checklist; cada PR entregado junta dos unidades consecutivas. Cada PR pasa igual por revisión de contexto fresco antes de abrirse.
+
+| PR entregado | Unidades | Contenido | ~Líneas |
+|---|---|---|---|
+| A | 1 + 2 | Smoke test, esqueleto, tokens, átomos | ~600 |
+| B | 3 + 4 | Contenido base, navegación, Inicio A | ~770 |
+| C | 5 + 6 | Inicio B y `/`, Experiencia | ~660 |
+| D | 7 + 8 | `lib/api` y `/acceso/` | ~790 |
+| E | 9 + 10 | `/acceso/verificar/` y `/reclutador/` | ~650 |
+| F | 11 + 12 | Playground y cierre del sitio | ~660 |
 
 ### Unidades de trabajo (base = `main` tras mergear el PR anterior)
 
@@ -44,7 +51,7 @@ PR 5, 6 y 7 pueden prepararse en paralelo en ramas distintas, pero se mergean en
 ## Preguntas abiertas (NO decidir en apply; preguntar a la usuaria)
 
 - [ ] Q1. Token del magic link en `?token=` (llega a logs de CloudFront y `Referer`) vs `#token=` (fragmento, no llega al servidor y elimina `Suspense`). Hoy: `?token=` según propuesta y spec. Afecta solo a `useMagicLinkToken.ts` (PR 9) y al correo del cambio de auth. Bloquea el PR 9.
-- [ ] Q2. 12 PRs vs `size:exception` (ver forecast). Bloquea el inicio de apply.
+- [x] Q2. 12 PRs vs `size:exception`: resuelta, `size:exception` con 6 PRs agrupados de a pares (ver forecast).
 
 > Conflictos spec/design resueltos el 2026-10-20 (ver design.md §16).
 
