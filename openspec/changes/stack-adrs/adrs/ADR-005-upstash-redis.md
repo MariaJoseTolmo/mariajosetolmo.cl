@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Estado | Propuesta (revisar: ElastiCache Serverless admite endpoint público, por lo que "sin VPC" ya no es exclusivo de Upstash) |
+| Estado | Aceptada (revisada el 2026-10-21: el motivo principal es el costo, no la VPC) |
 | Fecha | 2026-10-20 |
 | Relación con el CV | Redis en producción; el proveedor Upstash es nuevo |
 
@@ -11,6 +11,8 @@
 En producción, Redis es Upstash. En local, Redis corre en Docker (`redis:8.10-alpine`). La app accede a Redis a través de un puerto propio, así el proveedor es un detalle del adaptador.
 
 Usos: tokens del magic link con TTL (guardados solo como hash) y rate limit.
+
+Motivo principal: **costo**. ElastiCache Serverless también admite un endpoint público sin VPC, así que evitar la VPC ya no distingue a Upstash. Lo que decide es que el tráfico de un portafolio cabe en el plan gratuito de Upstash, mientras que ElastiCache Serverless cobra un mínimo de ~USD 6/mes aunque no se use, casi un tercio del presupuesto de USD 20/mes.
 
 ## Contexto y problema
 
