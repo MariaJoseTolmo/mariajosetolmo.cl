@@ -10,7 +10,7 @@ No hay frontend. Este cambio crea `apps/web`: el sitio público (Inicio, Experie
 
 ### Dentro del alcance
 - `apps/web` con Next.js 16.4.2 + React 19.3.1, App Router, `output: 'export'`, `trailingSlash: true`, `images.unoptimized`.
-- Rutas: `/`, `/experiencia/`, `/acceso/`, `/acceso/verificar/?token=…`, `/reclutador/`, `404.html`.
+- Rutas: `/`, `/experiencia/`, `/acceso/`, `/acceso/verificar/#token=…`, `/reclutador/`, `404.html`.
 - CSS Modules + `src/styles/tokens.css`; IBM Plex Sans/Mono con `next/font/google` (plan B: `next/font/local`).
 - Una sola implementación responsive: los mockups "Móvil" son el mismo componente a 390 px.
 - Contenido en módulos TS tipados (`src/content/`) + test de guardas de contenido.

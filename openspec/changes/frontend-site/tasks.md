@@ -50,7 +50,7 @@ PR 5, 6 y 7 pueden prepararse en paralelo en ramas distintas, pero se mergean en
 
 ## Preguntas abiertas (NO decidir en apply; preguntar a la usuaria)
 
-- [ ] Q1. Token del magic link en `?token=` (llega a logs de CloudFront y `Referer`) vs `#token=` (fragmento, no llega al servidor y elimina `Suspense`). Hoy: `?token=` según propuesta y spec. Afecta solo a `useMagicLinkToken.ts` (PR 9) y al correo del cambio de auth. Bloquea el PR 9.
+- [x] Q1. Resuelta (2026-10-21, decisión de la usuaria): el token del magic link viaja en el fragmento `#token=` (no llega a CloudFront, sus logs ni `Referer`; sin `Suspense`). Afecta a `useMagicLinkToken.ts` (PR 9) y al correo del cambio de auth: `https://mariajosetolmo.cl/acceso/verificar/#token=<token>`.
 - [x] Q2. 12 PRs vs `size:exception`: resuelta, `size:exception` con 6 PRs agrupados de a pares (ver forecast).
 
 > Conflictos spec/design resueltos el 2026-10-20 (ver design.md §16).
@@ -137,10 +137,10 @@ PR 5, 6 y 7 pueden prepararse en paralelo en ramas distintas, pero se mergean en
 
 ## PR 9: `/acceso/verificar/` (~260)
 
-- [ ] 9.0 **Bloqueo:** resolver Q1 (`?token=` vs `#token=`) con la usuaria antes de escribir `useMagicLinkToken`.
-- [ ] 9.1 RED→GREEN: `useMagicLinkToken.ts` (captura en inicializador de `useState`, luego `history.replaceState`; `location.search` queda vacío; token en memoria). Único archivo que lee el token.
+- [x] 9.0 Q1 resuelta: el token se lee del fragmento `#token=`.
+- [ ] 9.1 RED→GREEN: `useMagicLinkToken.ts` (lee `window.location.hash` tras montar, guarda el token en `useState`, luego `history.replaceState` que vacía el hash; estado `pending` en el primer render; `location.search` se ignora). Tests: hash con token (capturado y hash vacío), sin hash (inválido), `?token=` en la query (ignorado). Único archivo que lee el token.
 - [ ] 9.2 RED→GREEN: `verifyReducer` y `VerifyView` (sin token → inválido con enlace a `/acceso/`).
-- [ ] 9.3 RED→GREEN: `VerifyContainer` (`'use client'`, `<Suspense>`, sin auto-consumo, `verifyToken` una vez al confirmar, estado «done» con enlace a `/reclutador/`).
+- [ ] 9.3 RED→GREEN: `VerifyContainer` (`'use client'`, sin `<Suspense>` ni `useSearchParams`, estado neutral hasta hidratar, sin auto-consumo, `verifyToken` una vez al confirmar, estado «done» con enlace a `/reclutador/`).
 - [ ] 9.4 `app/acceso/verificar/page.tsx` + test + axe; `noindex` vía metadata (se verifica en PR 12).
 - [ ] 9.5 CIERRE (`gitleaks dir apps/web/app/acceso apps/web/src/features/login`).
 

@@ -60,13 +60,19 @@ El acceso a la API MUST pasar por el puerto `ApiGateway` (TypeScript, `src/lib/a
 
 ### Requirement: Página de verificación del magic link
 
-`/acceso/verificar/` MUST leer `token` de la query con `useSearchParams` dentro de un `<Suspense>`. Al montar, MUST eliminar el token de la URL con `history.replaceState` sin recargar. MUST NOT consumir el token automáticamente: solo tras presionar "Confirmar ingreso" se invoca `ApiGateway.verifyToken(token)`. Si no hay token, MUST mostrar un estado de enlace inválido con enlace a `/acceso/`. Tras éxito MUST mostrar el estado "done" con enlace a `/reclutador/`.
+`/acceso/verificar/` MUST leer el token únicamente del fragmento de la URL (`window.location.hash`, formato `#token=<token>`) y MUST NOT leerlo de la query string. Como el fragmento solo existe en el cliente, la lectura MUST ocurrir tras el montaje; en el primer render (y en el HTML prerenderizado) MUST mostrarse un estado neutral ("Cargando…") hasta la hidratación, sin mostrar aún el estado de enlace inválido. Justificación: el fragmento nunca llega a CloudFront, a sus logs ni a la cabecera `Referer`. Justo después de capturar el token, MUST eliminarlo de la URL con `history.replaceState` (vaciando el fragmento) sin recargar. MUST NOT consumir el token automáticamente: solo tras presionar "Confirmar ingreso" se invoca `ApiGateway.verifyToken(token)`. Si no hay token en el fragmento, MUST mostrar un estado de enlace inválido con enlace a `/acceso/`. Tras éxito MUST mostrar el estado "done" con enlace a `/reclutador/`. Para leer el token MUST NOT requerirse `useSearchParams` ni `<Suspense>`.
 
-#### Scenario: El token sale de la URL
+#### Scenario: Token en el fragmento, capturado y borrado
 
-- GIVEN la URL `/acceso/verificar/?token=abc`
+- GIVEN la URL `/acceso/verificar/#token=abc`
 - WHEN la página monta
-- THEN `window.location.search` queda vacío y el token sigue disponible en memoria
+- THEN el token `abc` queda disponible en memoria y `window.location.hash` queda vacío (la URL pasa a `/acceso/verificar/`)
+
+#### Scenario: Estado neutral en el primer render
+
+- GIVEN la página aún no hidratada
+- WHEN se renderiza por primera vez
+- THEN se muestra un estado neutral y no el estado de enlace inválido
 
 #### Scenario: Sin auto-consumo
 
@@ -82,15 +88,15 @@ El acceso a la API MUST pasar por el puerto `ApiGateway` (TypeScript, `src/lib/a
 
 #### Scenario: Sin token
 
-- GIVEN la URL `/acceso/verificar/` sin query
+- GIVEN la URL `/acceso/verificar/` sin fragmento
 - WHEN la página monta
-- THEN se muestra el estado inválido y `verifyToken` no se invoca
+- THEN se muestra el estado de enlace inválido con enlace a `/acceso/` y `verifyToken` no se invoca
 
-#### Scenario: Suspense presente
+#### Scenario: Token en la query string se ignora
 
-- GIVEN el build de producción
-- WHEN se genera `out/acceso/verificar/index.html`
-- THEN el prerender no falla por `useSearchParams` (el build termina con código 0)
+- GIVEN la URL `/acceso/verificar/?token=abc` sin fragmento
+- WHEN la página monta
+- THEN el token NO se lee, se muestra el estado de enlace inválido y `verifyToken` no se invoca
 
 ### Requirement: Guard de sesión en la zona reclutador
 

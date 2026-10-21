@@ -140,7 +140,7 @@ Hay un solo breakpoint: `@media (min-width: 761px)`, mobile-first.
 | Páginas, secciones, `SiteHeader`, `Footer` | Server | Presentacional, sin hooks (Jest las renderiza directo) |
 | `MobileMenu` | Client | Estado local: `aria-expanded`, `aria-controls`, Escape y devolución del foco |
 | `LoginContainer` → `LoginForm`, `StepsPanel` | Client → presentacional | El container es dueño del reducer y del gateway; la vista solo recibe props |
-| `VerifyContainer` → `VerifyView` | Client → presentacional | Envuelto en `<Suspense>` (por `useSearchParams`) |
+| `VerifyContainer` → `VerifyView` | Client → presentacional | Lee el token de `location.hash` tras el montaje; sin `useSearchParams` ni `<Suspense>` |
 | `RecruiterZone` → `CvCard`, `ContactCard`, `DetailsCard`, `ApiPlayground` | Client → presentacional | El guard vive en el container |
 
 Cada página renderiza su propio `SiteHeader variant="public|minimal|session"`, su `<main id="contenido">` y su `Footer`. El layout solo aporta `html`, `body`, las fuentes, la metadata y `SkipLink`.
@@ -203,8 +203,8 @@ Usuario      LoginContainer      Gateway             API
   │ submit ───→│ SUBMIT           │                    │
   │            │──requestMagicLink→──POST magic-link──→│ 202 (siempre igual)
   │            │ SENT             │                    │
-  │  (correo) abre /acceso/verificar/?token=T          │
-  │            VerifyContainer: guarda T en useState(init) → history.replaceState(…'/acceso/verificar/')
+  │  (correo) abre /acceso/verificar/#token=T          │
+  │            VerifyContainer: 1er render neutral; tras montar lee T de location.hash → history.replaceState(…'/acceso/verificar/')
   │ "Confirmar"→│ CONFIRM          │──verifyToken──────→──POST verify─────→│ Set-Cookie (HttpOnly)
   │            │ DONE → enlace a /reclutador/ | ERROR (invalid-token / rate-limited / network)
 ```
@@ -216,8 +216,8 @@ Usuario      LoginContainer      Gateway             API
 
 - El correo es obligatorio y se valida con `type="email"` y `required`. Los errores se anuncian con `aria-describedby` y una región `role="alert"`.
 - `name` y `company` vacíos no se envían (se recortan con `trim`).
-- **Gotcha del token:** `history.replaceState` actualiza `useSearchParams` en Next. Por eso `useMagicLinkToken` captura el token en el inicializador de `useState`, antes de limpiar la URL. Toda la lectura del token está en ese hook, así que cambiar de `?token` a `#token` toca un solo archivo.
-- El fallback de `Suspense` es la tarjeta "Cargando…". Es lo que queda prerenderizado en el HTML.
+- **Captura del token (`useMagicLinkToken`):** el token viaja en el fragmento (`#token=`), que solo existe en el cliente. El hook lo lee de `window.location.hash` en un efecto tras el montaje (nunca durante el prerender), lo guarda en `useState` (memoria) y llama a `history.replaceState(null, '', '/acceso/verificar/')`, que vacía el fragmento. Ignora por completo `location.search`: un `?token=` no se lee. Toda la lectura del token está en ese hook (único archivo que la hace).
+- **Primer render:** el hook expone un estado `pending` hasta que el efecto corre; la vista muestra la tarjeta neutral "Cargando…" (es lo que queda prerenderizado en el HTML) y solo después decide entre `ready` o `missing-token`. No se usa `useSearchParams`, por lo que no hace falta `<Suspense>`.
 
 **Saludo** (`greeting.ts`, función pura con su test):
 1. Si `company` tiene texto (tras `trim`): "Gracias por tu interés, equipo de {company}".
@@ -316,7 +316,7 @@ Vive junto a su productor: el test que compara rutas documentadas con `out/` cor
 | Caché | `_next/static/*`: `public, max-age=31536000, immutable`. HTML: `max-age=0, must-revalidate` + invalidación en cada deploy. La query string queda fuera de la clave de caché |
 | Cabeceras (response headers policy) | CSP: `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'`. `Referrer-Policy: no-referrer` (protege el token). HSTS de 2 años. `nosniff`. `X-Frame-Options: DENY`. `Permissions-Policy` restrictiva |
 | Por qué `'unsafe-inline'` | El export estático inyecta `<script>self.__next_f.push(…)</script>` inline. No se pueden usar nonces porque no hay servidor, y SRI es experimental. Mejora futura: que `check-out` calcule hashes. `style-src` sin `'unsafe-inline'` está **NO VERIFICADO**: se prueba en el navegador y, si falla, se documenta |
-| Logs | Los logs estándar de CloudFront registran la query string, y con ella el token. Mitigación: el token es de un solo uso, tiene TTL corto y se guarda como hash (ver la pregunta abierta 1) |
+| Logs | Los logs estándar de CloudFront registran la query string, pero el fragmento nunca llega al servidor. Como el token viaja en el fragmento (`#token=`), no llega a los logs ni a `Referer`. `Referrer-Policy: no-referrer` se mantiene como defensa en profundidad |
 
 ## 13. Plan de PRs (stacked-to-main, sin lockfile)
 
@@ -366,7 +366,7 @@ Total ≈ 3.930 líneas, contra unas 2.000 en la propuesta.
 | Las custom error responses afectan también a `/api/*` | Está documentado en el contrato; decide infra |
 | `me` debe devolver `company`, `name` y `availability`; los endpoints de CV y `logout` no están definidos | Dependencia con el cambio de auth; los tipos son provisionales |
 | Contraste del acento ≈ 4.56 | El test falla si baja de 4.5 |
-| El token queda en la query (logs) | Pregunta abierta 1 |
+| Dependencia con el cambio de auth: el enlace del correo MUST ser `https://mariajosetolmo.cl/acceso/verificar/#token=<token>` (fragmento, no query) | Decisión registrada en §16; `Referrer-Policy: no-referrer` sigue recomendada como defensa en profundidad |
 
 ## 16. Reconciliación spec/design (2026-10-20)
 
@@ -381,9 +381,10 @@ Regla aplicada: prevalece la spec, salvo que la opción del design sea técnicam
 | 5 | Ruta del contrato | `apps/web/docs/delivery-contract.md` | Spec | Lo produce y lo testea `apps/web`; se versiona con su código |
 | 6 | Mapeo de errores en CloudFront | Solo 404 → `/404.html` (404), con `s3:ListBucket` en el OAC; 403 nunca | Design | Las custom error responses aplican a toda la distribución; mapear 403 rompe el 403 de `admin/visits` |
 | 7 | Origen de "Disponibilidad" | `getMe().availability` | Spec | Reutiliza la respuesta del guard (una petición menos) y no inventa un endpoint que el cambio de auth no tiene |
+| 9 | Token del magic link en el fragmento (`#token=`), decisión de la usuaria 2026-10-21 | Usuaria | El fragmento no llega a CloudFront, sus logs ni `Referer`, y elimina `useSearchParams`/`Suspense` en la verificación |
 | 8 | Contenido del sitemap | `/`, `/experiencia/`, `/acceso/`; sin `/reclutador/` ni `/acceso/verificar/` (`noindex`) | Ambos (ya coincidían) | Se agrega al design la regla de `robots.txt` sin `Disallow` |
 
 ## Preguntas abiertas
 
-- [ ] 1. ¿Conviene que el token viaje en el fragmento (`/acceso/verificar/#token=…`) en lugar de `?token=`? El fragmento nunca llega a CloudFront, ni a los logs, ni al `Referer`, y además elimina la necesidad de `Suspense`. Hoy se mantiene `?token` según la propuesta; el cambio afectaría solo a `useMagicLinkToken` y al correo del cambio de auth.
+- [x] 1. Resuelta (2026-10-21): el token viaja en el fragmento (`/acceso/verificar/#token=…`). El correo del cambio de auth debe usar `https://mariajosetolmo.cl/acceso/verificar/#token=<token>`.
 - [ ] 2. ¿Se pasa a 12 PRs o se acepta `size:exception` con menos PRs?
