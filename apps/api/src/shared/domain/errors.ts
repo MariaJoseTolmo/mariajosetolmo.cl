@@ -34,3 +34,12 @@ export class Unauthenticated extends DomainError {
     super('Authentication required');
   }
 }
+
+/** A per-IP limit was exceeded: the HTTP layer answers 429 with Retry-After. */
+export class RateLimited extends DomainError {
+  readonly code = 'RATE_LIMITED';
+
+  constructor(readonly retryAfterSeconds: number) {
+    super('Too many requests');
+  }
+}

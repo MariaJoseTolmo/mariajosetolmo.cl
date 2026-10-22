@@ -17,3 +17,5 @@ export const TEST_ENV = {
 export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
   return { ...loadConfig(TEST_ENV), ...overrides };
 }
+
+export const TEST_ORIGIN = 'https://app.example.test';

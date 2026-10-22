@@ -5,9 +5,8 @@ export interface Secrets {
   readonly jwtPreviousPublicKeyPem: string | null;
   readonly jwtPreviousKeyId: string | null;
   readonly adminEmail: string;
-  /** Null until the stores that need them exist (database and Redis). */
-  readonly databaseUrl: string | null;
-  readonly redisUrl: string | null;
+  readonly databaseUrl: string;
+  readonly redisUrl: string;
 }
 
 export interface SecretsProvider {

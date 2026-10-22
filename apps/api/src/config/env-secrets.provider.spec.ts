@@ -18,6 +18,8 @@ const BASE_ENV = {
   JWT_PRIVATE_KEY_FILE: '/keys/private.pem',
   JWT_KEY_ID: 'kid-1',
   ADMIN_EMAIL: 'admin@example.test',
+  DATABASE_URL: 'postgres://user:pw@127.0.0.1:5432/db',
+  REDIS_URL: 'redis://127.0.0.1:6379',
 };
 
 describe('EnvSecretsProvider', () => {
@@ -29,38 +31,37 @@ describe('EnvSecretsProvider', () => {
       jwtPreviousPublicKeyPem: null,
       jwtPreviousKeyId: null,
       adminEmail: 'admin@example.test',
-      databaseUrl: null,
-      redisUrl: null,
+      databaseUrl: 'postgres://user:pw@127.0.0.1:5432/db',
+      redisUrl: 'redis://127.0.0.1:6379',
     });
   });
 
-  it('loads the previous public key and optional urls when provided', async () => {
+  it('loads the previous public key when provided', async () => {
     const secrets = await new EnvSecretsProvider(
       {
         ...BASE_ENV,
         JWT_PREVIOUS_PUBLIC_KEY_FILE: '/keys/previous-public.pem',
         JWT_PREVIOUS_KEY_ID: 'kid-0',
-        DATABASE_URL: 'postgres://user:pw@127.0.0.1:5432/db',
-        REDIS_URL: 'redis://127.0.0.1:6379',
       },
       readFile,
     ).load();
     expect(secrets.jwtPreviousPublicKeyPem).toBe(FAKE_PUBLIC_PEM);
     expect(secrets.jwtPreviousKeyId).toBe('kid-0');
-    expect(secrets.databaseUrl).toBe('postgres://user:pw@127.0.0.1:5432/db');
-    expect(secrets.redisUrl).toBe('redis://127.0.0.1:6379');
   });
 
-  it.each(['JWT_PRIVATE_KEY_FILE', 'JWT_KEY_ID', 'ADMIN_EMAIL'])(
-    'rejects when %s is missing, naming the variable only',
-    async (key) => {
-      const env: Record<string, string | undefined> = { ...BASE_ENV };
-      delete env[key];
-      await expect(
-        new EnvSecretsProvider(env, readFile).load(),
-      ).rejects.toThrow(new RegExp(`^Missing secret: ${key}$`));
-    },
-  );
+  it.each([
+    'JWT_PRIVATE_KEY_FILE',
+    'JWT_KEY_ID',
+    'ADMIN_EMAIL',
+    'DATABASE_URL',
+    'REDIS_URL',
+  ])('rejects when %s is missing, naming the variable only', async (key) => {
+    const env: Record<string, string | undefined> = { ...BASE_ENV };
+    delete env[key];
+    await expect(new EnvSecretsProvider(env, readFile).load()).rejects.toThrow(
+      new RegExp(`^Missing secret: ${key}$`),
+    );
+  });
 
   it('does not leak file contents when the key file cannot be read', async () => {
     await expect(

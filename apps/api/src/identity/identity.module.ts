@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
+import type { DataSource } from 'typeorm';
+import { DATA_SOURCE } from '../shared/infrastructure/persistence/data-source.factory';
 import { AvailabilityModule } from '../availability/availability.module';
 import { GetMe } from './application/get-me.use-case';
 import { USER_REPOSITORY } from './application/ports/user-repository.port';
 import { MeController } from './infrastructure/http/me.controller';
-import { InMemoryUserRepository } from './infrastructure/persistence/in-memory-user.repository';
+import { TypeOrmUserRepository } from './infrastructure/persistence/typeorm-user.repository';
 
 @Module({
   imports: [AvailabilityModule],
@@ -12,7 +14,9 @@ import { InMemoryUserRepository } from './infrastructure/persistence/in-memory-u
     GetMe,
     {
       provide: USER_REPOSITORY,
-      useFactory: () => new InMemoryUserRepository(),
+      useFactory: (dataSource: DataSource) =>
+        new TypeOrmUserRepository(dataSource),
+      inject: [DATA_SOURCE],
     },
   ],
   exports: [USER_REPOSITORY],

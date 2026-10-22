@@ -340,3 +340,4 @@ Sin despliegue: no hay estado en AWS. El plan de 4 PRs de la propuesta se mantie
 - [ ] Q2/Q3/Q1 y ADR-009 siguen sin verificar. Este diseño aísla su impacto en `SessionCookieWriter`, `ClientIpResolver` y `OriginGuard`.
 - [x] Gracia de reutilización de 10 s (A9): aceptada por la usuaria (2026-10-21).
 - [x] 403 por falta de `CloudFront-Viewer-Address` en prod (fallo cerrado): aceptado por la usuaria (2026-10-21). Seguimiento: un cambio de frontend debe informar al usuario qué error devuelve la API y por qué.
+- [x] Riesgo aceptado: el límite por email responde `202` sin enviar, así que cualquiera que conozca un email puede agotarle el cupo (3 por ventana de 15 minutos) y suprimir sus enlaces mientras dure la ventana. Es la consecuencia de la decisión de respuesta silenciosa e idéntica (antienumeración). No hay mitigación en este cambio; la ventana es corta y el límite por IP frena el abuso sostenido.

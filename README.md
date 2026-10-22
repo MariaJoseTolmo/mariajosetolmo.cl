@@ -23,16 +23,18 @@ Si ya tienes Postgres o Redis nativos ocupando los puertos por defecto, cambia `
 
 ## Scripts
 
-| Script                    | Qué hace                                                            |
-| ------------------------- | ------------------------------------------------------------------- |
-| `npm run lint`            | ESLint (type-checked) sobre todo el repo, sin `spikes/`             |
-| `npm run lint:boundaries` | Verifica que las capas hexagonales respeten sus límites             |
-| `npm run format:check`    | Prettier en modo verificación                                       |
-| `npm run typecheck`       | `tsc --noEmit` en modo `strict`                                     |
-| `npm test`                | Pruebas unitarias (Jest)                                            |
-| `npm run test:cov`        | Unitarias con cobertura (umbral 80 % en `domain/` y `application/`) |
-| `npm run test:e2e`        | Pruebas e2e con supertest                                           |
-| `npm run build`           | Compila `apps/api` a `dist/`                                        |
+| Script                              | Qué hace                                                                                                                                  |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run lint`                      | ESLint (type-checked) sobre todo el repo, sin `spikes/`                                                                                   |
+| `npm run lint:boundaries`           | Verifica que las capas hexagonales respeten sus límites                                                                                   |
+| `npm run format:check`              | Prettier en modo verificación                                                                                                             |
+| `npm run typecheck`                 | `tsc --noEmit` en modo `strict`                                                                                                           |
+| `npm test`                          | Pruebas unitarias (Jest)                                                                                                                  |
+| `npm run test:cov`                  | Unitarias con cobertura (umbral 80 % en `domain/` y `application/`)                                                                       |
+| `npm run test:e2e`                  | Pruebas e2e con supertest                                                                                                                 |
+| `npm run build`                     | Compila `apps/api` a `dist/`                                                                                                              |
+| `npm run test:int -w apps/api`      | Integración contra Redis y Postgres reales (`docker compose up -d --wait`; exporta `REDIS_URL` y `DATABASE_URL` si cambiaste los puertos) |
+| `npm run migration:run -w apps/api` | Compila y aplica las migraciones con `MIGRATIONS_DATABASE_URL` (`migration:revert` deshace la última)                                     |
 
 ## Estructura
 
@@ -52,7 +54,7 @@ Reglas de capas (las hace cumplir `npm run lint:boundaries`): `domain` no import
 
 ## Compuertas de calidad
 
-- CI (GitHub Actions): job `quality` (lint, límites, formato, tipos, cobertura, e2e, build) y job `secrets` (gitleaks sobre todo el historial). Acciones fijadas por SHA.
+- CI (GitHub Actions): job `quality` (lint, límites, formato, tipos, cobertura, e2e, build), job `integration` (pruebas contra Redis y Postgres reales, con los mismos digests de imagen que docker-compose) y job `secrets` (gitleaks sobre todo el historial). Acciones fijadas por SHA.
 - Hook pre-commit (`.githooks/pre-commit`): ejecuta `gitleaks git --pre-commit --staged`; falla cerrado si gitleaks no está instalado. `npm ci` lo activa con `core.hooksPath`.
 - Dependabot: npm (sin saltos de major de TypeScript), GitHub Actions y docker-compose, de forma semanal.
 - Strict TDD: todo comportamiento nuevo se escribe primero como prueba que falla.
@@ -62,6 +64,7 @@ Reglas de capas (las hace cumplir `npm run lint:boundaries`): `domain` no import
 Una línea por pieza que no figura en mi CV (regla 3 del brief). Lo que sí domino (NestJS, TypeORM, Redis, Kafka, Jest, Swagger, Docker) no se justifica acá.
 
 - **Mailpit**: captura localmente los correos del magic link sin enviar nada real; reemplaza a SES solo en desarrollo.
+- **`nodemailer`**: adaptador SMTP hacia Mailpit en local, igual que Mailpit es herramienta de desarrollo; en producción el puerto `MailSender` usa el adaptador de SES.
 - **`apache/kafka` en modo KRaft**: broker de un solo nodo sin ZooKeeper para el adaptador local del puerto `EventPublisher`; en producción se usaría SQS por costo.
 - **Redis 8**: se usa solo en desarrollo local; a partir de la versión 8 cambió la licencia (RSALv2/SSPL/AGPLv3), algo a revisar antes de usarlo en producción (allí se prevé Upstash).
 - **gitleaks**: detecta secretos en el hook pre-commit y en CI; imprescindible en un repo público.

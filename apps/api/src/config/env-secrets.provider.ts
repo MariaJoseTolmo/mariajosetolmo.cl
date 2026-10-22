@@ -38,8 +38,8 @@ export class EnvSecretsProvider implements SecretsProvider {
       jwtPreviousKeyId:
         previousFile === null ? null : this.required('JWT_PREVIOUS_KEY_ID'),
       adminEmail: this.required('ADMIN_EMAIL'),
-      databaseUrl: this.optional('DATABASE_URL'),
-      redisUrl: this.optional('REDIS_URL'),
+      databaseUrl: this.required('DATABASE_URL'),
+      redisUrl: this.required('REDIS_URL'),
     };
   }
 

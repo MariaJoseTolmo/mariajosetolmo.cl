@@ -84,25 +84,25 @@ Un solo hilo de escritura. Cada PR pasa por revisión de contexto fresco antes d
 
 > Nota de revisión de PR1: `ClientIpResolver` debe inyectarse mediante el token `CLIENT_IP_RESOLVER` (hoy solo existe la factory `createClientIpResolver`; registrar el proveedor con `APP_CONFIG.clientIpSource`), y el 403 por falta de `CloudFront-Viewer-Address` debe ejercitarse e2e sobre la ruta `POST /api/auth/magic-link` (con `CLIENT_IP_SOURCE=cloudfront` en esa suite).
 
-- [ ] 4.1 `package.json` (`ioredis`, scripts `test:int`), `test/jest-int.config.js`, `docker-compose` sin cambios; `.github/workflows/ci.yml`: job `integration` con service containers (digest = compose).
-- [ ] 4.2 `src/shared/infrastructure/redis/redis-client.factory.ts` (`lazyConnect`, sin offline queue, `rediss://`).
-- [ ] 4.3 RED `test/integration/redis-magic-link.int-spec.ts` (`GETDEL`, TTL 900, solo hash, consumo concurrente) → GREEN `redis-magic-link.store.ts` + `InMemoryMagicLinkStore`.
-- [ ] 4.4 RED `test/integration/redis-rate-limiter.int-spec.ts` (ventana, `retryAfterSeconds`, IPv6 `/64`) → GREEN `redis-rate-limiter.ts` + `InMemoryRateLimiter`.
-- [ ] 4.5 RED `src/auth/infrastructure/redis/redis-errors.spec.ts` → GREEN mapeo a `InfrastructureUnavailable` (503). CIERRE.
+- [x] 4.1 `package.json` (`ioredis`, scripts `test:int`), `test/jest-int.config.js`, `docker-compose` sin cambios; `.github/workflows/ci.yml`: job `integration` con service containers (digest = compose).
+- [x] 4.2 `src/shared/infrastructure/redis/redis-client.factory.ts` (`lazyConnect`, sin offline queue, `rediss://`).
+- [x] 4.3 RED `test/integration/redis-magic-link.int-spec.ts` (`GETDEL`, TTL 900, solo hash, consumo concurrente) → GREEN `redis-magic-link.store.ts` + `InMemoryMagicLinkStore`.
+- [x] 4.4 RED `test/integration/redis-rate-limiter.int-spec.ts` (ventana, `retryAfterSeconds`, IPv6 `/64`) → GREEN `redis-rate-limiter.ts` + `InMemoryRateLimiter`.
+- [x] 4.5 RED `src/auth/infrastructure/redis/redis-errors.spec.ts` → GREEN mapeo a `InfrastructureUnavailable` (503). CIERRE.
 
 ## U5 — Petición de magic link (PR2)
 
-- [ ] 5.1 RED `src/auth/domain/magic-link-token.spec.ts` → GREEN `magic-link-token.ts` (43 chars base64url).
-- [ ] 5.2 RED `src/auth/application/request-magic-link.use-case.spec.ts` (mismo trabajo, límite email silencioso, fallo de correo, sin tocar `users`) → GREEN `request-magic-link.use-case.ts`.
-- [ ] 5.3 RED `smtp-mail.sender.spec.ts`, `magic-link-email.spec.ts` (`#token=`, nunca `?token=`) → GREEN `smtp-mail.sender.ts`, `ses-mail.sender.ts`, `magic-link-email.ts`; deps `nodemailer`, `@aws-sdk/client-sesv2`.
-- [ ] 5.4 RED `test/auth-magic-link.e2e-spec.ts` (202 idéntico, 400, 429, 202 silencioso, XFF, Origin, CloudFront 403, 503) → GREEN `auth.controller.ts` (`magic-link`), `auth.module.ts` con `APP_GUARD` en orden. CIERRE.
+- [x] 5.1 RED `src/auth/domain/magic-link-token.spec.ts` → GREEN `magic-link-token.ts` (43 chars base64url).
+- [x] 5.2 RED `src/auth/application/request-magic-link.use-case.spec.ts` (mismo trabajo, límite email silencioso, fallo de correo, sin tocar `users`) → GREEN `request-magic-link.use-case.ts`.
+- [x] 5.3 RED `smtp-mail.sender.spec.ts`, `magic-link-email.spec.ts` (`#token=`, nunca `?token=`) → GREEN `smtp-mail.sender.ts`, `ses-mail.sender.ts`, `magic-link-email.ts`; deps `nodemailer`, `@aws-sdk/client-sesv2`.
+- [x] 5.4 RED `test/auth-magic-link.e2e-spec.ts` (202 idéntico, 400, 429, 202 silencioso, XFF, Origin, CloudFront 403, 503) → GREEN `auth.controller.ts` (`magic-link`), `auth.module.ts` con `APP_GUARD` en orden. CIERRE.
 
 ## U6 — Verificación (PR2)
 
-- [ ] 6.1 RED `src/identity/domain/admin-policy.spec.ts` (case/espacios, sin elevar por payload) → GREEN `admin-policy.ts`.
-- [ ] 6.2 `data-source.factory.ts`, `data-source.cli.ts`, migración `…-users.ts` (`up`/`down`, `COMMENT ON`), scripts `migration:run|revert`. RED `test/integration/migrations.int-spec.ts` (up→down→up) y `typeorm-user.repository.int-spec.ts` (upsert `COALESCE`) → GREEN `user.schema.ts`, `typeorm-user.repository.ts`; deps `typeorm`, `pg`.
-- [ ] 6.3 RED `src/auth/application/verify-magic-link.use-case.spec.ts` (usuario nuevo/existente, rol, concurrencia, 503) → GREEN `verify-magic-link.use-case.ts` + `InMemoryRefreshTokenRepository` (solo `create`).
-- [ ] 6.4 RED `test/auth-verify.e2e-spec.ts` (flujo feliz con cookies, reutilizado/vencido/basura → 400 según spec, ver Q-A, concurrente, rol, 503) → GREEN `verify` en `auth.controller.ts`. CIERRE.
+- [x] 6.1 RED `src/identity/domain/admin-policy.spec.ts` (case/espacios, sin elevar por payload) → GREEN `admin-policy.ts`.
+- [x] 6.2 `data-source.factory.ts`, `data-source.cli.ts`, migración `…-users.ts` (`up`/`down`, `COMMENT ON`), scripts `migration:run|revert`. RED `test/integration/migrations.int-spec.ts` (up→down→up) y `typeorm-user.repository.int-spec.ts` (upsert `COALESCE`) → GREEN `user.schema.ts`, `typeorm-user.repository.ts`; deps `typeorm`, `pg`.
+- [x] 6.3 RED `src/auth/application/verify-magic-link.use-case.spec.ts` (usuario nuevo/existente, rol, concurrencia, 503) → GREEN `verify-magic-link.use-case.ts` + `InMemoryRefreshTokenRepository` (solo `create`).
+- [x] 6.4 RED `test/auth-verify.e2e-spec.ts` (flujo feliz con cookies, reutilizado/vencido/basura → 400 según spec, ver Q-A, concurrente, rol, 503) → GREEN `verify` en `auth.controller.ts`. CIERRE.
 
 ## U7 — Persistencia de refresh (PR3)
 
