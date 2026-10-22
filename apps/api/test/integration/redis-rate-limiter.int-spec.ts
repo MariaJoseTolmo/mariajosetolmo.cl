@@ -91,8 +91,10 @@ describe('RedisRateLimiter (real Redis)', () => {
     const prefix = `2001:db8:${unique().slice(0, 4)}:${unique().slice(0, 4)}`;
     const first = track(ipRateLimitKey('ml:ip', `${prefix}::1`, rule));
     const second = track(ipRateLimitKey('ml:ip', `${prefix}:0:0:0:99`, rule));
+    // Differs from `prefix` in its last hex digit, whatever that digit is.
+    const flipped = prefix.endsWith('f') ? 'e' : 'f';
     const neighbour = track(
-      ipRateLimitKey('ml:ip', `${prefix.slice(0, -1)}f::1`, rule),
+      ipRateLimitKey('ml:ip', `${prefix.slice(0, -1)}${flipped}::1`, rule),
     );
     expect(redisKeyOf(first)).toBe(redisKeyOf(second));
     await limiter.hit(first);

@@ -185,3 +185,82 @@ Fresh review of PR2: 0 CRITICAL. Safety net before: 348 unit, 72 e2e, 32 integra
 | 5. Design risk | `design.md` section 17 | N/A | One line: a known email can have its quota exhausted and its links suppressed for the window; accepted consequence of the silent 202 | N/A | N/A |
 
 Totals after the fixes: 376 unit (40 suites, domain/application lines 100 %, branches 91 %), 77 e2e (8 suites), 34 integration (5 suites). Gates: lint, lint:boundaries, format:check, typecheck, test:cov, test:e2e, test:int, build, scan-secrets all green (scan exit 0). Diff size: about 4,530 changed lines excluding lockfile and openspec.
+
+## Batch 3 - PR3 (U7, U8): tasks 7.1-8.3 complete (5/5 of the batch)
+
+Mode: Strict TDD, `size:exception` (user decision), stacked-to-main PR3 on top of merged PR2 (#20). Branch `feat/auth-backend-sessions`.
+
+Safety net before touching existing files: 376 unit (40 suites), 77 e2e (8 suites), 34 integration (5 suites), all green.
+
+Totals after the batch: 436 unit (44 suites; domain/application lines 100 %, branches 93.6 %), 110 e2e (9 suites), 57 integration (6 suites) against real Redis and Postgres.
+
+RED rule: every RED below was RUN and its failing output recorded before the fix. Skeletons (wrong on purpose) make the failure behavioral. The e2e RED ran against routes that did not exist yet (all 404; note that the Origin guard does not run on unmatched routes, so the Origin rows could only be proven on the real routes).
+
+### TDD Cycle Evidence
+
+| Task | Test file | Layer | Safety net | RED (run, failing output) | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|---------------------------|-------|-------------|----------|
+| 7.1 | `test/integration/typeorm-refresh-token.int-spec.ts`, `migrations.int-spec.ts` (new `refresh_tokens` block) | Integration | migrations 8/8 and user repo 9/9 before | Skeleton repo (no-ops) and empty migration: 22 failed of 31 (`relation "refresh_tokens" does not exist`; `Expected: {userId, familyId, expiresAt} Received: null`; index, FK, CHECK and COMMENT rows) | 31/31 (57/57 whole layer). Up-down-up expectation changed: each `down` undoes only its own migration (newest first), so the test now undoes twice | create (bytea 32, defaults, duplicate hash); consume (once, null the second time with `used_at` unmoved, unknown, revoked and not marked used, expiry exclusive at the instant and valid 1 ms before, 20 simultaneous callers give exactly 1 winner on a pool of 2); findByHash unused/used/revoked/unknown; revokeFamily (only that family, first revocation time kept); revokeFamilyOf (through a used token, unknown ignored); FK `ON DELETE CASCADE`; UNIQUE hash; CHECK length 32 (62 and 66 hex rejected); indexes on hash, family and user; COMMENTs; database down gives `InfrastructureUnavailable`; lazy DataSource | `normalizeRows` because TypeORM returns `[rows, affected]` for `UPDATE ... RETURNING` |
+| 7.2a | `src/auth/domain/refresh-token.spec.ts` | Unit | N/A (new) | Skeleton (empty token, null parse, never revoke): 9 failed of 20 (`Expected "AQEB..." Received ""`; judge rows `Expected - 2 Received + 2`) | 20/20 (27/27 with later edits) | generate vs known bytes and sha256; different bytes; parse round trip; 10 malformed shapes give `null`; judge: unknown, expired unused, revoked, revoked and used, used 11 s, exactly 10 s, 1 s, 10.001 s | Domain takes a structural `RefusedTokenState` (lint: domain cannot import the port) |
+| 7.2b | `src/auth/infrastructure/in-memory/in-memory-refresh-token.repository.spec.ts` | Unit | verify use case and e2e green before | Skeleton with no-op methods: 6 failed of 7 | 7/7 | Same contract rows as the Postgres spec (once, unknown, revoked, expiry exclusive, 10 simultaneous, state, family revocation, `revokeFamilyOf`) and `all()` keeps the created shape | `all()` returns rows as created, so earlier specs are untouched |
+| 7.2c | `test/postgres-down.e2e-spec.ts` (new row) | E2E | e2e 77/77 before | 1 failed: `Expected length: 1 Received length: 0` (no `INSERT INTO refresh_tokens` reached the DataSource: runtime still bound to memory) | 78/78 after binding `TypeOrmRefreshTokenRepository` in `auth.module.ts` and overriding the port with the in-memory repo in `createTestApp` (unless a stand-in DataSource is passed) | Hash is the bound parameter and the clear token is nowhere in the parameters | None needed |
+| 8.1 | `src/auth/application/refresh-session.use-case.spec.ts` | Unit | N/A (new) | Skeleton that refuses everything: 24 failed of 24 | 24/24 | Rotation (new token, JWT from the stored role, old token spent); family and absolute end kept through 3 chained refreshes; only the new hash stored; demotion visible at refresh; expiry at 7 d refused and 1 s before accepted; missing/empty/number/wrong shape never reach limiter or database; unknown token counted; reuse after 11 s kills the newest token too; 10 s grace leaves the family alive; 10.001 s boundary; revoked-never-used; another family untouched; simultaneous refreshes give one `issued` and one race outcome; deleted user revokes the family; per-IP limit with exact `retryAfterSeconds` 800, per IP, IPv6 /64; limiter down, consume down and create down (token spent, no JWT) | `ipRule` option shaped like `VerifyMagicLinkOptions`; rejected outcome is a typed result, not an exception, so the controller can decide the cookies |
+| 8.2 | `src/auth/application/logout.use-case.spec.ts` | Unit | request-magic-link spec 25/25 before moving `describeFailure` | Skeleton no-op: 3 failed of 9 (the other 6 pass trivially on a no-op; the 3 positive rows force the logic and make the negative rows real) | 9/9 | Whole family revoked; other family untouched; already-spent token; missing/number/wrong shape; unknown well formed; database down is swallowed and logged with kind only (no token, no host); silent on success | `describeFailure` moved from `request-magic-link.use-case.ts` to `shared/application/describe-failure.ts` (25/25 still green) |
+| 8.3 | `test/refresh.e2e-spec.ts` | E2E | e2e 78/78 before | 31 failed of 32 (all answered 404; the only pass was `GET /api/auth/refresh` 404, correct by absence) | 32/32 after `refresh` and `logout` in `auth.controller.ts` and the module providers (110/110 whole layer). One test fix: the expired access JWT needs 910 s because the verifier tolerates 5 s of clock skew | Exact `Set-Cookie` strings (rotation, `Max-Age` 518400 after a day, chain 6/5/4 days, `Max-Age=1` one second before expiry), 204 empty body and `no-store`; hash only stored; insecure cookie names; no cookie/garbage/unknown/expired give 401 JSON with exact clearing lines; reuse >10 s clears and kills R2; reuse <=10 s has no `Set-Cookie`; other session of the same user survives; simultaneous requests give 204 + 401 without cookies; 429 with `Retry-After: 540`, token not spent, other IP passes; POST without/foreign Origin 403 on both real routes with the session surviving; missing viewer address 403 on refresh, not needed on logout; Redis down and Postgres down give 503 generic, no cookies; logout always 204 + exact clearing (none/unknown/garbage/twice), kills the rotated family, JWT lives until expiry, database down still 204 and logged; both routes in `docs-json` under `auth` | `cookieValue` helper in the controller |
+
+Manual runtime proof (built `dist`, real Postgres, Redis and Mailpit, throwaway schema, `COOKIE_SECURE=false`): `migration:run` applied both migrations; magic-link 202; verify 204 (refresh `Max-Age=604799`); `/me` 200; refresh 204 with a different token; reuse inside 10 s 401 with zero `Set-Cookie` lines; 8 simultaneous refreshes with one token gave exactly one 204 and seven 401; reuse after 11 s 401 with both cookies cleared; the table shows 3 rows, 32-byte hashes, all revoked, expiry about 7 days after creation for every row; logout without cookies 204. Schema dropped, dev key deleted.
+
+### Test Summary
+
+- New tests in the batch: 60 unit (376 to 436), 33 e2e (77 to 110), 23 integration (34 to 57).
+- Layers: Unit, E2E, Integration (real Postgres for the repository and migration).
+- Mocks: none (`jest.mock` not used); hand-written fakes only. One existing integration spec used `jest.spyOn` already (PR2).
+- Approval tests: none; edits to existing behavior were additive, plus the up-down-up expectation that now counts two migrations.
+
+### Gates (final run, after the last change)
+
+`lint` OK; `lint:boundaries` OK; `format:check` OK; `typecheck` OK; `npm test -w apps/api` 436/436; `test:cov` all files 100 % lines, branches 93.6 % (domain/application 100 % lines); `test:e2e` 110/110; `test:int` 57/57 (3 consecutive clean runs); `build` OK; `scan-secrets.sh` exit 0 (it first flagged a 12-digit UUID in a new test; replaced with the `ffffffff-...` id used elsewhere; dev key deleted).
+
+### Dependencies added
+
+None.
+
+### Deviations from tasks/design (PR3)
+
+1. SUPERSEDED by review fix 1 (Batch 3 — Fixes de revisión): rotation is now ONE atomic statement (`rotate`), not `consume` then `create`. A failure leaves the old token unspent.
+2. `RefreshSession` returns `{ kind: 'issued' | 'rejected', clearCookies }` instead of throwing, so the controller can clear cookies only when it should and then throw `Unauthenticated` (401). A malformed or absent cookie is rejected before the rate limiter, so a missing cookie does not need Redis.
+3. `refresh` with missing/unknown/expired cookie clears cookies (design table says so); spec only mandates 401.
+4. An index on `refresh_tokens(user_id)` was added (not in the design) because the FK cascade and any per-user lookup would otherwise scan the table.
+5. `refresh-token.ts` in the domain holds both the `RefreshToken` value object and the pure decision `judgeRefusedRefresh`.
+6. A flaky PR2 integration test was fixed: `redis-rate-limiter.int-spec.ts` built the "neighbour /64" by replacing the last hex digit with `f`, which collided with the same /64 one run in 16 (observed once in 6 runs: `allowed: false` expected true). It now flips to `e` when the digit is already `f`.
+7. `SequenceRandomSource` got an optional start offset (test support) so login and rotated tokens never share bytes.
+8. No cleanup job for expired or revoked `refresh_tokens` rows (not in scope); the table grows by one row per refresh. Worth a follow-up before real traffic.
+9. Gate C3 (fresh-context review) and the CIERRE checkboxes are left for the orchestrator. Adding `integration` as a required check in the ruleset still needs the user.
+
+### Workload / PR boundary
+
+- Mode: stacked PR slice with `size:exception` (user decision), PR3 = U7-U8, base `main` (PR2 merged).
+- Boundary: starts at `main` with Redis stores, magic link request/verify and an in-memory refresh repo; ends with the `refresh_tokens` migration and TypeORM repository bound at runtime, `POST /api/auth/refresh` and `POST /api/auth/logout`. Rollback: `git revert` of the PR plus `npm run migration:revert -w apps/api` (one migration, `refresh_tokens`); sessions issued by then become unusable for refresh (users sign in again).
+- Size: about 2,210 changed lines excluding lockfile and openspec (about 580 production, about 1,630 tests and support), far above the forecast of ~520 and the 400 budget.
+
+### Remaining
+
+U9-U10 (PR4) not started.
+
+## Batch 3 — Fixes de revisión
+
+Fresh review of PR3: 0 CRITICAL, 2 WARNING, 3 SUGGESTION. Safety net before: 436 unit, 110 e2e, 57 integration green.
+
+| Fix | Test file | RED (run, failing output) | GREEN | TRIANGULATE | REFACTOR |
+|-----|-----------|---------------------------|-------|-------------|----------|
+| 1. Rotation in one statement; revoked family can never get a live token | `test/integration/typeorm-refresh-token.int-spec.ts`, `in-memory-refresh-token.repository.spec.ts` | Port changed to `rotate(old, new, now)` with the OLD two-statement logic as skeleton. Integration: 2 failed of 22 (`refuses a live token whose family has a revoked row`: Received `{expiresAt, familyId, userId}` instead of null; `never leaves a live token in a revoked family when revoke races rotate (40 trials)`: Expected 0 Received 1, a live successor in a revoked family). In-memory: 1 failed of 10 (same straggler row) | Single `WITH spent AS (UPDATE ... AND NOT EXISTS (revoked row in family) RETURNING) INSERT ... SELECT FROM spent RETURNING`: 22/22, but the race trial then failed 1 run in 5 (`Expected 0 Received 1`): a revocation waiting on the lock of the rotating row never sees the successor. Fix: `revokeFamily`/`revokeFamilyOf` repeat (fresh snapshot per pass, max 5) until a pass revokes nothing: 12 consecutive runs 22/22. In-memory 10/10 | Revoke then rotate refused and writes nothing; straggler live row in a revoked family refused; successor in same family with same end; refused rotation writes no row (unknown, used, expired); 40 trials with three revoke timings (`revokeFamily`, `revokeFamilyOf`, delayed); 20 simultaneous rotations still give 1 winner | `consume` removed from the port; helper `next()` in the int spec |
+| 2. A transient failure no longer logs the user out | `src/auth/application/refresh-session.use-case.spec.ts` | 2 failed of 27 (`database down on the read`: promise resolved instead of rejected; `user lookup failing`: old token was already spent, `usedAt` not null) | Flow is now: `findByHash` (read) -> usable? -> `users.findById` -> `rotate` -> sign JWT: 27/27 | User lookup failure: 503, token unspent, retry succeeds; rotation failure: 503, no JWT, 1 row, retry succeeds; read failure; order is `rotate` then `issue`; revoke landing between read and rotation gives a cleared 401, no JWT, no new row | `judge()` shared by the unusable-read and rotate-refused paths; the old "create down: token is spent" test was replaced |
+| 3. Logout swallowing a DB error logs at `warn` | `src/auth/application/logout.use-case.spec.ts`, `test/refresh.e2e-spec.ts` | 1 failed of 9 (`warnings` empty: it logged at error) | `Logger` port gained `warn`; `NestLogger`, `CapturingLogger` implement it; 9/9 and e2e 110/110 | Warning text has the failure kind only (no token, no host); no `error`; silent on success | Documented in `design.md` section 17 |
+| 4. Grace window uses the app clock | `design.md` section 17 | Docs only | N/A | N/A | N/A |
+| 5. Cleanup job follow-up | `tasks.md` section "Seguimiento" (F1) | Docs only | N/A | N/A | N/A |
+
+Also updated in `design.md`: port signature (`rotate`), the atomic-statement list, the multi-pass revocation rationale, and the refresh sequence.
+
+Totals after the fixes: 442 unit (44 suites, lines 100 %, branches 94.1 %), 110 e2e (9 suites), 62 integration (6 suites). Gates: lint, lint:boundaries, format:check, typecheck, test:cov, test:e2e, test:int (4 clean runs), build, scan-secrets (exit 0) all green; no dev keys left. Diff size after the fixes: about 2,510 changed lines excluding lockfile and openspec.
+
+Residual note: with `READ COMMITTED` the revocation loop is what closes the lock-wait window; the cap of 5 passes only guards an endless loop (an attacker cannot rotate faster than a pass in practice).

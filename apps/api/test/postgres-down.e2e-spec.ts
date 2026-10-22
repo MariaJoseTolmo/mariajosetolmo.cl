@@ -1,4 +1,5 @@
 import request from 'supertest';
+import { sha256Hex } from '../src/shared/domain/hash';
 import { createTestApp, type TestApp } from './support/test-app';
 import { TEST_ORIGIN } from './support/test-config';
 
@@ -7,6 +8,7 @@ class FlakyDataSource {
   isInitialized = false;
   up = false;
   initializeCalls = 0;
+  readonly statements: { sql: string; params: unknown[] }[] = [];
 
   initialize(): Promise<this> {
     this.initializeCalls += 1;
@@ -16,7 +18,8 @@ class FlakyDataSource {
     return Promise.resolve(this);
   }
 
-  query(sql: string): Promise<unknown[]> {
+  query(sql: string, params: unknown[] = []): Promise<unknown[]> {
+    this.statements.push({ sql, params });
     if (!sql.includes('INSERT INTO users')) return Promise.resolve([]);
     return Promise.resolve([
       {
@@ -85,5 +88,23 @@ describe('Postgres unreachable at boot', () => {
     const recovered = await verifyNewLink();
     expect(recovered.status).toBe(204);
     expect(recovered.headers['set-cookie']).toHaveLength(2);
+  });
+
+  it('writes the refresh token row through the DataSource (hash only), not in memory', async () => {
+    db.up = true;
+    const res = await verifyNewLink();
+    expect(res.status).toBe(204);
+    const cookies = res.headers['set-cookie'] as unknown as string[];
+    const refresh = (
+      cookies.find((c) => c.startsWith('__Secure-refresh=')) ?? ''
+    )
+      .split(';')[0]
+      ?.slice('__Secure-refresh='.length);
+    const inserts = db.statements.filter((s) =>
+      s.sql.includes('INSERT INTO refresh_tokens'),
+    );
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0]?.params).toContain(sha256Hex(refresh ?? ''));
+    expect(JSON.stringify(inserts[0]?.params)).not.toContain(refresh);
   });
 });

@@ -26,11 +26,18 @@ import { REDIS_CLIENT } from '../shared/infrastructure/redis/redis-client.factor
 import type { Redis } from 'ioredis';
 import { IdentityModule } from '../identity/identity.module';
 import { REFRESH_TOKEN_REPOSITORY } from './application/ports/refresh-token-repository.port';
+import { Logout } from './application/logout.use-case';
+import {
+  REFRESH_SESSION_OPTIONS,
+  RefreshSession,
+} from './application/refresh-session.use-case';
 import {
   VERIFY_MAGIC_LINK_OPTIONS,
   VerifyMagicLink,
 } from './application/verify-magic-link.use-case';
-import { InMemoryRefreshTokenRepository } from './infrastructure/in-memory/in-memory-refresh-token.repository';
+import { TypeOrmRefreshTokenRepository } from './infrastructure/persistence/typeorm-refresh-token.repository';
+import { DATA_SOURCE } from '../shared/infrastructure/persistence/data-source.factory';
+import type { DataSource } from 'typeorm';
 import { SessionCookieWriter } from './infrastructure/http/session-cookie.writer';
 import { JwtAuthGuard } from './infrastructure/http/guards/jwt-auth.guard';
 import { OriginGuard } from './infrastructure/http/guards/origin.guard';
@@ -90,8 +97,9 @@ const ACCESS_TOKEN_SERVICE = Symbol('ACCESS_TOKEN_SERVICE');
     RequestMagicLink,
     {
       provide: REFRESH_TOKEN_REPOSITORY,
-      // In memory until the Postgres repository replaces it (U7).
-      useFactory: () => new InMemoryRefreshTokenRepository(),
+      useFactory: (dataSource: DataSource) =>
+        new TypeOrmRefreshTokenRepository(dataSource),
+      inject: [DATA_SOURCE],
     },
     {
       provide: VERIFY_MAGIC_LINK_OPTIONS,
@@ -102,6 +110,15 @@ const ACCESS_TOKEN_SERVICE = Symbol('ACCESS_TOKEN_SERVICE');
       inject: [APP_CONFIG, APP_SECRETS],
     },
     VerifyMagicLink,
+    {
+      provide: REFRESH_SESSION_OPTIONS,
+      useFactory: (config: AppConfig) => ({
+        ipRule: config.rateLimits.refreshIp,
+      }),
+      inject: [APP_CONFIG],
+    },
+    RefreshSession,
+    Logout,
     {
       provide: SessionCookieWriter,
       useFactory: (config: AppConfig) =>
