@@ -49,15 +49,15 @@ apps/api/src/
 │   │   ├── redis/ redis-magic-link.store.ts  redis-rate-limiter.ts
 │   │   ├── jose/ jose-access-token.service.ts
 │   │   ├── mail/ smtp-mail.sender.ts  ses-mail.sender.ts  magic-link-email.ts (plantilla)
-│   │   └── persistence/ refresh-token.schema.ts  typeorm-refresh-token.repository.ts
+│   │   └── persistence/ typeorm-refresh-token.repository.ts
 │   └── auth.module.ts
 ├── identity/
 │   ├── domain/ email.ts  role.ts  user.ts  admin-policy.ts
 │   ├── application/ ports/user-repository.port.ts  get-me.use-case.ts
-│   ├── infrastructure/ http/{me.controller.ts, me-response.dto.ts}  persistence/{user.schema.ts, typeorm-user.repository.ts}
+│   ├── infrastructure/ http/{me.controller.ts, me-response.dto.ts}  persistence/typeorm-user.repository.ts
 │   └── identity.module.ts              # exporta USER_REPOSITORY
 ├── availability/ domain/availability.ts  application/ports/availability-repository.port.ts
-│                 infrastructure/persistence/{availability.schema.ts, typeorm-availability.repository.ts}  availability.module.ts
+│                 infrastructure/persistence/typeorm-availability.repository.ts  availability.module.ts
 ├── cv/ application/{ports/cv-link-signer.port.ts, get-cv-link.use-case.ts}
 │       infrastructure/{http/cv.controller.ts, s3-cv-link.signer.ts, fake-cv-link.signer.ts}  cv.module.ts
 └── admin/ application/list-visits.use-case.ts  infrastructure/http/admin-visits.controller.ts  admin.module.ts
@@ -77,7 +77,7 @@ apps/api/scripts/dev-keys.js            # genera apps/api/.keys/ (gitignored) pa
 | # | Opción elegida | Alternativas | Motivo |
 |---|----------------|--------------|--------|
 | A1 | `DataSource` de `typeorm` creado por una factory propia (`DATA_SOURCE`) | `@nestjs/typeorm` | Compatibilidad con Nest 12 sin verificar. Además, un token propio se reemplaza en e2e con un solo `overrideProvider`. |
-| A2 | `EntitySchema` en `infrastructure` y SQL parametrizado (`dataSource.query`) para las sentencias atómicas | Entidades con decoradores | El dominio queda sin decoradores de TypeORM y las operaciones críticas son una sola sentencia, sin transacción ni estado de sesión. |
+| A2 | SQL parametrizado (`dataSource.query`) en los repositorios de `infrastructure`; las tablas las definen las migraciones, sin `EntitySchema` ni entidades | `EntitySchema` o entidades con decoradores | El dominio queda sin decoradores de TypeORM, las operaciones críticas son una sola sentencia sin transacción ni estado de sesión, y un mapeo de entidades no aportaba nada que la migración y el SQL no den ya. |
 | A3 | Validación en los value objects del dominio (`Email.parse`, `MagicLinkToken.parse`); los DTO solo sirven para Swagger | `ValidationPipe` + `class-validator` | Las reglas viven en el dominio y se testean sin Nest. Una dependencia menos. |
 | A4 | Rate limit propio (puerto `RateLimiter`, adaptador Redis) | `@nestjs/throttler` | Hace falta una clave por email con respuesta silenciosa y la IP de `ClientIpResolver`. El throttler no cubre ninguna de las dos cosas sin forzarlo. |
 | A5 | `jose` detrás de `AccessTokenIssuer`/`AccessTokenVerifier` | `@nestjs/jwt`, JWS a mano con `node:crypto` | JWKS con `exportJWK`, `kid` y `currentDate` inyectable (`Clock`). El plan B es `node:crypto` (§12). |
@@ -180,7 +180,7 @@ interface CvLinkSigner { sign(now: Date): Promise<{ url: string; expiresAt: Date
 - **Claves:** `h()` = sha256. Las claves no contienen ni emails ni IPs en claro. Las IPv6 se agrupan por su prefijo `/64` antes del hash.
 - **Límites:** se configuran con valores por defecto (`RATE_LIMITS`). `retryAfterSeconds` sale de `TTL` y viaja en la cabecera `Retry-After`.
 - **Patrón `SET NX EX` + `INCR`:** funciona en Redis 8 y en Upstash sin `EXPIRE … NX` ni Lua.
-- **Cliente:** `lazyConnect`, `enableOfflineQueue: false`, `maxRetriesPerRequest: 1`, `connectTimeout: 2000`. En Upstash se usa una URL `rediss://`.
+- **Cliente:** `lazyConnect`, cola offline **encendida** (`enableOfflineQueue: true`), `maxRetriesPerRequest: 1`, `connectTimeout: 2000`. En Upstash se usa una URL `rediss://`. La cola offline se enciende porque con `lazyConnect` y la cola apagada el primer comando falla antes de que la conexión se establezca (RED ejecutado durante la implementación). Sigue fallando cerrado: `maxRetriesPerRequest: 1` y `connectTimeout` acotan la espera y, con Redis inaccesible, el adaptador devuelve `InfrastructureUnavailable` → 503.
 - **Fallos:** cualquier error del adaptador se convierte en `InfrastructureUnavailable` → **503** (fallo cerrado).
 
 ## 8. Cookies y `SessionCookieWriter`
@@ -265,7 +265,7 @@ POST /auth/magic-link {email,…} (Origin ok) ─→ RequestMagicLink
 
 POST /auth/verify {token:T} ────────────────→ VerifyMagicLink
                                               ├ parse(T) → 400 | RateLimiter ip → 429
-                                              ├ GETDEL ml:tok:{sha256(T)} → null ⇒ 401
+                                              ├ GETDEL ml:tok:{sha256(T)} → null ⇒ 400
                                               ├ role = AdminPolicy(email); users UPSERT … RETURNING
                                               ├ familia nueva; INSERT refresh_tokens (expires = now + 7 d)
                                               └ AccessTokenIssuer (RS256, kid)

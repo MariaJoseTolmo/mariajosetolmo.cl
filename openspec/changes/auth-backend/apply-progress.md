@@ -330,3 +330,42 @@ Manual runtime proof (built `dist`, real Postgres, Redis and Mailpit, throwaway 
 ### Remaining
 
 Nothing in U1-U10. Seguimiento F1 and F2 stay open (out of this change).
+
+## Fixes de verificación
+
+Branch `fix/auth-backend-verify-findings` (from `main`, PR1-PR4 merged). Source: `verify-report.md` (PASS WITH WARNINGS: 0 CRITICAL, 5 WARNING, 6 SUGGESTION). Mode: Strict TDD. Production code untouched except `design.md` (documentation); F1-F3 untouched.
+
+### TDD cycle evidence
+
+| Item | Test file | Layer | Safety net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| W1 JWKS verifies the real `__Host-access` cookie (issuer, audience, alg RS256, kid, role, exp-iat=900) | `apps/api/test/jwks.e2e-spec.ts` | E2E | 3/3 | Mutation: `setAudience('other')` in `jose-access-token.service.ts` made only the new test fail (`unexpected "aud" claim value`; 1 failed, 3 passed). Restored | 4/4 | Two sources of token (issuer direct, cookie from verify) | Clean |
+| W5 five `resolves.toBeDefined()` replaced with concrete values | `verify-magic-link.use-case.spec.ts` (3: refresh token matches `^[A-Za-z0-9_-]{43}$`, plus `refresh.all()` length where relevant), `ssm-secrets.provider.spec.ts` (3 cases: `databaseUrl` for `require` and `verify-full`, `redisUrl` for `rediss://`) | Unit | 35/35 | Mutations: `refreshToken.slice(1)` in `verify-magic-link.use-case.ts` (4 failed) and `databaseUrl: 'x'`/`redisUrl: 'y'` in `ssm-secrets.provider.ts` (9 failed in total across both files). Restored | 35/35 | Two `it.each` modes plus the redis case | Replaced `expect.stringMatching` (lint `no-unsafe-assignment`) with `expect((await verify(...)).refreshToken).toMatch(...)` |
+| S4 uppercase, space-padded `ADMIN_EMAIL` still yields ADMIN | `apps/api/test/auth-verify.e2e-spec.ts` (`roles`) | E2E | 19/19 | Mutation: removed `trim().toLowerCase()` in `admin-policy.ts`; the new test fails (1 failed, 19 passed). Restored (M6 of the report now dies in e2e) | 20/20 | Companion tests: mixed-case visitor email, recruiter | Clean |
+| S2 stale comment in `admin.e2e-spec.ts` | `apps/api/test/admin.e2e-spec.ts` | n/a | 31/31 | n/a (comment only) | 31/31 | Triangulation skipped: comment only | Clean |
+| W2 `design.md` aligned with the code | `openspec/changes/auth-backend/design.md` | n/a (docs) | n/a | n/a | n/a | n/a | n/a |
+| S1 `rate-limit-key.ts` unreachable branches | not changed | n/a | n/a | n/a | n/a | n/a | n/a |
+
+S1 left alone on purpose: L28/L40-41 are the defaults that `noUncheckedIndexedAccess` forces on destructuring (`[a = 0, ...]`, `[head = '', tail]`); removing them is not trivial and the coverage threshold (80 %) is met at 94.05 %.
+
+### W2 changes in `design.md`
+
+- Section 2 tree: removed `refresh-token.schema.ts`, `user.schema.ts` and `availability.schema.ts`.
+- A2: now "SQL parametrizado + migraciones, sin EntitySchema", with the reason.
+- Section 7: client is `enableOfflineQueue: true`, with the reason (with `lazyConnect` and the queue off, the first command fails before the connection exists; RED observed in PR2) and why it still fails closed (`maxRetriesPerRequest: 1`, `connectTimeout`, `InfrastructureUnavailable` -> 503).
+- Section 12 sequence: `GETDEL ... null => 400` (spec and section 11 already said 400).
+- No other drift found beyond the report's list (checked `rg` for `schema.ts`, `EntitySchema`, `offline`, `401` in the verify flow).
+
+### W4 PR4 fresh-context review
+
+Result: 0 CRITICAL, 0 WARNING, 3 SUGGESTIONS, all addressed in PR4 (#22):
+1. ADR-012: note on credential expiry added and the source fixed.
+2. Placeholder `[dato de ejemplo]` deploy check -> tracked as Seguimiento F3 (out of this change).
+3. `expiresAt` versus credential expiry documented in ADR-012.
+
+With this, the fresh-context review exists for PR1, PR2, PR3 and PR4 (C3).
+
+### Gates (after the fixes)
+
+lint, lint:boundaries, format:check, typecheck: exit 0. `test`: 49 suites / 472 tests. `test:cov`: Stmts 100, Branch 94.05, Funcs 100, Lines 100. `test:e2e`: 10 suites / 123 tests (+2: W1, S4). `test:int`: 7 suites / 74 tests. `build`: exit 0. `scan-secrets.sh`: exit 0, `RESULT: clean`.
+Totals: 669 tests (472 + 123 + 74).

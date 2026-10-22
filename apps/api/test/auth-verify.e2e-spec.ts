@@ -154,6 +154,19 @@ describe('POST /api/auth/verify', () => {
         .expect(200);
     });
 
+    it('trims and lowercases the configured ADMIN_EMAIL before comparing', async () => {
+      await t.close();
+      await open({ secrets: { adminEmail: '  ADMIN@Example.TEST  ' } });
+      const res = await verify(await requestLink('admin@example.test')).expect(
+        204,
+      );
+      const me = await request(t.server())
+        .get('/api/v1/me')
+        .set('Cookie', sessionCookie(res))
+        .expect(200);
+      expect((me.body as { role: string }).role).toBe('ADMIN');
+    });
+
     it('keeps everyone else out of /admin', async () => {
       const res = await verify(
         await requestLink('recruiter@example.test'),
