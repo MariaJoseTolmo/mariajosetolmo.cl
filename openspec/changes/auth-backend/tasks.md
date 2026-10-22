@@ -48,9 +48,9 @@ Un solo hilo de escritura. Cada PR pasa por revisión de contexto fresco antes d
 
 ## Cierre estándar de PR («CIERRE»)
 
-- [ ] C1. Contar líneas (`additions + deletions`, sin lockfile); si excede 400 y no hay `size:exception` aprobado, STOP.
-- [ ] C2. `npm run lint && npm run lint:boundaries && npm run format:check && npm run typecheck && npm run test:cov && npm run test:e2e && npm run build` en verde; desde U4 también `npm run test:int -w apps/api`.
-- [ ] C3. Cobertura `domain`/`application` ≥ 80 %; gitleaks sin hallazgos; revisión de contexto fresco.
+- [x] C1. Contar líneas (`additions + deletions`, sin lockfile); si excede 400 y no hay `size:exception` aprobado, STOP.
+- [x] C2. `npm run lint && npm run lint:boundaries && npm run format:check && npm run typecheck && npm run test:cov && npm run test:e2e && npm run build` en verde; desde U4 también `npm run test:int -w apps/api`.
+- [x] C3. Cobertura `domain`/`application` ≥ 80 %; gitleaks sin hallazgos; revisión de contexto fresco.
 
 ## U1 — Fundación (PR1)
 
@@ -85,7 +85,7 @@ Un solo hilo de escritura. Cada PR pasa por revisión de contexto fresco antes d
 > Nota de revisión de PR1: `ClientIpResolver` debe inyectarse mediante el token `CLIENT_IP_RESOLVER` (hoy solo existe la factory `createClientIpResolver`; registrar el proveedor con `APP_CONFIG.clientIpSource`), y el 403 por falta de `CloudFront-Viewer-Address` debe ejercitarse e2e sobre la ruta `POST /api/auth/magic-link` (con `CLIENT_IP_SOURCE=cloudfront` en esa suite).
 
 - [x] 4.1 `package.json` (`ioredis`, scripts `test:int`), `test/jest-int.config.js`, `docker-compose` sin cambios; `.github/workflows/ci.yml`: job `integration` con service containers (digest = compose).
-- [x] 4.2 `src/shared/infrastructure/redis/redis-client.factory.ts` (`lazyConnect`, sin offline queue, `rediss://`).
+- [x] 4.2 `src/shared/infrastructure/redis/redis-client.factory.ts` (`lazyConnect`, cola offline encendida por el RED de `lazyConnect`, `rediss://`).
 - [x] 4.3 RED `test/integration/redis-magic-link.int-spec.ts` (`GETDEL`, TTL 900, solo hash, consumo concurrente) → GREEN `redis-magic-link.store.ts` + `InMemoryMagicLinkStore`.
 - [x] 4.4 RED `test/integration/redis-rate-limiter.int-spec.ts` (ventana, `retryAfterSeconds`, IPv6 `/64`) → GREEN `redis-rate-limiter.ts` + `InMemoryRateLimiter`.
 - [x] 4.5 RED `src/auth/infrastructure/redis/redis-errors.spec.ts` → GREEN mapeo a `InfrastructureUnavailable` (503). CIERRE.

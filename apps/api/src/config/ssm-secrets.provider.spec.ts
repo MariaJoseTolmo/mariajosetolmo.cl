@@ -102,11 +102,10 @@ describe('SsmSecretsProvider', () => {
     it.each(['require', 'verify-full'])(
       'accepts a database URL with sslmode=%s',
       async (mode) => {
+        const url = `postgres://u:pw@example.test/db?sslmode=${mode}`;
         await expect(
-          load({
-            [`${PREFIX}/database-url`]: `postgres://u:pw@example.test/db?sslmode=${mode}`,
-          }),
-        ).resolves.toBeDefined();
+          load({ [`${PREFIX}/database-url`]: url }),
+        ).resolves.toMatchObject({ databaseUrl: url });
       },
     );
 
@@ -140,7 +139,7 @@ describe('SsmSecretsProvider', () => {
     it('accepts rediss:// and rejects plain redis://', async () => {
       await expect(
         load({ [`${PREFIX}/redis-url`]: 'rediss://:pw@example.test:6379' }),
-      ).resolves.toBeDefined();
+      ).resolves.toMatchObject({ redisUrl: 'rediss://:pw@example.test:6379' });
       const failure = await load({
         [`${PREFIX}/redis-url`]: 'redis://:secretpw@example.test:6379',
       }).catch((e: unknown) => e);

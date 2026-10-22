@@ -8,7 +8,8 @@ interface OpenApiDocument {
 
 const JSON_TYPE = /application\/json/;
 
-// There is no mutating route yet, so guard order is exercised on a probe.
+// Only a probe is needed for the 401 case: a good Origin and no session on a
+// POST route that no real controller exposes to the guards under test.
 @Controller('v1/probe')
 class ProbeController {
   @Post()

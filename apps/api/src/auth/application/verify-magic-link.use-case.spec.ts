@@ -86,6 +86,8 @@ function setup(
   };
 }
 
+const REFRESH_TOKEN_SHAPE = /^[A-Za-z0-9_-]{43}$/;
+
 const verify = (
   t: Setup,
   token: unknown,
@@ -245,7 +247,9 @@ describe('VerifyMagicLink', () => {
       const early = await t.issueLink({ email: 'a@example.test' });
       const late = await t.issueLink({ email: 'b@example.test' });
       t.clock.advanceSeconds(899);
-      await expect(verify(t, early)).resolves.toBeDefined();
+      expect((await verify(t, early)).refreshToken).toMatch(
+        REFRESH_TOKEN_SHAPE,
+      );
       t.clock.advanceSeconds(1);
       await expect(verify(t, late)).rejects.toBeInstanceOf(InvalidMagicLink);
     });
@@ -299,14 +303,20 @@ describe('VerifyMagicLink', () => {
       expect((failure as RateLimited).retryAfterSeconds).toBe(300);
       // The refused attempt did not burn the link (shorter window than its TTL).
       t.clock.advanceSeconds(300);
-      await expect(verify(t, token)).resolves.toBeDefined();
+      expect((await verify(t, token)).refreshToken).toMatch(
+        REFRESH_TOKEN_SHAPE,
+      );
+      expect(t.refresh.all()).toHaveLength(1);
     });
 
     it('does not affect another IP', async () => {
       const t = setup({ ipRule: { limit: 1, windowSeconds: 900 } });
       await verify(t, 'G'.repeat(43)).catch(() => undefined);
       const token = await t.issueLink({ email: 'a@example.test' });
-      await expect(verify(t, token, '203.0.113.2')).resolves.toBeDefined();
+      expect((await verify(t, token, '203.0.113.2')).refreshToken).toMatch(
+        REFRESH_TOKEN_SHAPE,
+      );
+      expect(t.refresh.all()).toHaveLength(1);
     });
   });
 

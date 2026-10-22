@@ -5,6 +5,7 @@ import {
   type AccessTokenIssuer,
 } from '../src/auth/application/ports/access-token.port';
 import { createTestApp, TEST_KEY_ID, type TestApp } from './support/test-app';
+import { TEST_ENV, TEST_ORIGIN } from './support/test-config';
 
 describe('JWKS (e2e)', () => {
   let t: TestApp;
@@ -52,6 +53,39 @@ describe('JWKS (e2e)', () => {
     });
     expect(protectedHeader).toEqual({ alg: 'RS256', kid: TEST_KEY_ID });
     expect(payload.sub).toBe('user-1');
+    expect((payload.exp ?? 0) - (payload.iat ?? 0)).toBe(900);
+  });
+
+  it('verifies the __Host-access cookie set by POST /api/auth/verify with only the published keys', async () => {
+    await request(t.server())
+      .post('/api/auth/magic-link')
+      .set('Origin', TEST_ORIGIN)
+      .send({ email: 'recruiter@example.test' })
+      .expect(202);
+    const verified = await request(t.server())
+      .post('/api/auth/verify')
+      .set('Origin', TEST_ORIGIN)
+      .send({ token: t.mail.lastToken() })
+      .expect(204);
+    const cookies = verified.headers['set-cookie'] as unknown as string[];
+    const access = cookies.find((c) => c.startsWith('__Host-access='));
+    const jwt = access?.split(';')[0]?.slice('__Host-access='.length) ?? '';
+    expect(jwt.split('.')).toHaveLength(3);
+
+    const published = await request(t.server()).get(
+      '/api/.well-known/jwks.json',
+    );
+    const jwks = createLocalJWKSet(published.body as JSONWebKeySet);
+    const { payload, protectedHeader } = await jwtVerify(jwt, jwks, {
+      currentDate: t.clock.now(),
+      issuer: TEST_ENV.JWT_ISSUER,
+      audience: 'web_cv-api',
+      algorithms: ['RS256'],
+    });
+    expect(protectedHeader).toEqual({ alg: 'RS256', kid: TEST_KEY_ID });
+    expect(payload.iss).toBe('https://issuer.example.test');
+    expect(payload.aud).toBe('web_cv-api');
+    expect(payload.role).toBe('RECRUITER');
     expect((payload.exp ?? 0) - (payload.iat ?? 0)).toBe(900);
   });
 });
