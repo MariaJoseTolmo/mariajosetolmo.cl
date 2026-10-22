@@ -2,7 +2,12 @@ import type { RandomSource } from '../../../src/shared/application/ports/random-
 
 /** Deterministic and never repeating: the n-th call fills with the byte n. */
 export class SequenceRandomSource implements RandomSource {
-  private calls = 0;
+  private calls: number;
+
+  /** `start` offsets the sequence so two sources never produce the same bytes. */
+  constructor(start = 0) {
+    this.calls = start;
+  }
 
   bytes(length: number): Uint8Array {
     this.calls += 1;

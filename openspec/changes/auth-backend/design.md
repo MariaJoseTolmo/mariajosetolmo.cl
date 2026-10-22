@@ -107,7 +107,7 @@ interface AccessTokenVerifier { verify(jwt: string, now: Date): Promise<Principa
 interface JwksProvider { jwks(): Promise<{ keys: JsonWebKey[] }> }
 interface RefreshTokenRepository {
   create(row: NewRefreshToken): Promise<void>;
-  consume(tokenHash: string, now: Date): Promise<ConsumedRefresh | null>;  // UPDATE … RETURNING
+  rotate(oldHash: string, newHash: string, now: Date): Promise<ConsumedRefresh | null>;  // una sola sentencia: UPDATE … RETURNING + INSERT
   findByHash(tokenHash: string): Promise<RefreshTokenState | null>;
   revokeFamily(familyId: string, now: Date): Promise<void>;
   revokeFamilyOf(tokenHash: string, now: Date): Promise<void>;
@@ -158,8 +158,9 @@ interface CvLinkSigner { sign(now: Date): Promise<{ url: string; expiresAt: Date
 - **Documentación:** `COMMENT ON TABLE` y `COMMENT ON COLUMN` en las columnas no obvias (`family_id`, `token_hash`, `used_at`).
 - **Sentencias atómicas:**
   - `upsertOnLogin`: `INSERT … ON CONFLICT (email) DO UPDATE SET role = EXCLUDED.role, company = COALESCE(EXCLUDED.company, users.company), name = COALESCE(EXCLUDED.name, users.name), last_login_at = $now RETURNING *`.
-  - `consume`: `UPDATE refresh_tokens SET used_at = $now WHERE token_hash = $1 AND used_at IS NULL AND revoked_at IS NULL AND expires_at > $now RETURNING user_id, family_id, expires_at`.
+  - `rotate`: una sola sentencia, `WITH spent AS (UPDATE refresh_tokens SET used_at = $now WHERE token_hash = $old AND used_at IS NULL AND revoked_at IS NULL AND expires_at > $now AND NOT EXISTS (fila revocada en la misma familia) RETURNING user_id, family_id, expires_at) INSERT INTO refresh_tokens (…) SELECT … FROM spent RETURNING …`. Gasta el token y guarda el sucesor, o ninguna de las dos cosas; si la base falla el token viejo sigue sin usar y el cliente puede reintentar.
   - `revokeFamilyOf`: `UPDATE … SET revoked_at = $now WHERE family_id = (SELECT family_id FROM refresh_tokens WHERE token_hash = $1) AND revoked_at IS NULL`.
+  - Las revocaciones (`revokeFamily`, `revokeFamilyOf`) repiten la sentencia hasta que una pasada no revoque nada (normalmente dos). Motivo: con `READ COMMITTED`, una revocación que espera el bloqueo de una rotación en curso no ve el sucesor que esa rotación inserta; la pasada siguiente, con instantánea nueva, sí.
 - **Pooler de Neon:**
   - `synchronize: false` y `migrationsRun: false`. Pool `extra.max = 2`, `connectTimeoutMS = 5000`.
   - `pg` solo usa sentencias con nombre si se le pasa `name`, y TypeORM no se lo pasa: NO VERIFICADO contra Neon; se prueba en el cambio de infra.
@@ -275,8 +276,8 @@ GET /v1/me (cookie access) → OriginGuard(no aplica) → JwtAuthGuard(verify RS
 
 POST /auth/refresh (cookie refresh, Path=/api/auth) → RefreshSession
    ├ RateLimiter ip
-   ├ UPDATE … used_at=now WHERE hash AND libre AND vigente RETURNING ─ fila ⇒ rotar: INSERT hijo (mismo family_id, mismo expires_at) + JWT ⇒ 204 + cookies
-   └ sin fila ⇒ findByHash: usado hace ≤10 s ⇒ 401 | usado/revocado ⇒ revokeFamily ⇒ 401 + clear | inexistente/vencido ⇒ 401 + clear
+   ├ findByHash (solo lectura) ⇒ usable ⇒ UserRepository.findById ⇒ rotate (una sentencia: gasta + inserta sucesor con mismo family_id y expires_at) ⇒ JWT ⇒ 204 + cookies
+   └ no usable, o rotate sin fila ⇒ findByHash: usado hace ≤10 s ⇒ 401 | usado/revocado ⇒ revokeFamily ⇒ 401 + clear | inexistente/vencido ⇒ 401 + clear
 
 POST /auth/logout → Logout: revokeFamilyOf(sha256(refresh)) (errores se registran) → 204 + clear
 ```
@@ -341,3 +342,5 @@ Sin despliegue: no hay estado en AWS. El plan de 4 PRs de la propuesta se mantie
 - [x] Gracia de reutilización de 10 s (A9): aceptada por la usuaria (2026-10-21).
 - [x] 403 por falta de `CloudFront-Viewer-Address` en prod (fallo cerrado): aceptado por la usuaria (2026-10-21). Seguimiento: un cambio de frontend debe informar al usuario qué error devuelve la API y por qué.
 - [x] Riesgo aceptado: el límite por email responde `202` sin enviar, así que cualquiera que conozca un email puede agotarle el cupo (3 por ventana de 15 minutos) y suprimir sus enlaces mientras dure la ventana. Es la consecuencia de la decisión de respuesta silenciosa e idéntica (antienumeración). No hay mitigación en este cambio; la ventana es corta y el límite por IP frena el abuso sostenido.
+- [x] Riesgo aceptado: si Postgres está caído en `logout`, el caso de uso responde igualmente `204` (contrato con el cliente) y limpia las cookies, pero la familia de refresh sigue viva en el servidor hasta su vencimiento (máximo 7 días desde el login). El fallo se registra con nivel `warn`, sin datos del token. Quien conserve una copia de la cookie podría seguir refrescando en ese lapso.
+- [x] Nota: la ventana de gracia de reutilización (10 s) se mide con el reloj de la aplicación (`Clock`). Con varias instancias, el desfase entre relojes la desplaza ligeramente; un `used_at` en el futuro cuenta como dentro de la gracia, lo cual es seguro (no revoca de más ni de menos que la propia ventana).

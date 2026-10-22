@@ -106,14 +106,14 @@ Un solo hilo de escritura. Cada PR pasa por revisión de contexto fresco antes d
 
 ## U7 — Persistencia de refresh (PR3)
 
-- [ ] 7.1 RED `test/integration/typeorm-refresh-token.int-spec.ts` (`consume` concurrente → uno gana, `bytea` 32, solo hash, `revokeFamilyOf`) → GREEN migración `…-refresh-tokens.ts`, `refresh-token.schema.ts`, `typeorm-refresh-token.repository.ts`.
-- [ ] 7.2 Reemplazar el repo en memoria en `auth.module.ts`; RED `src/auth/domain/refresh-token.spec.ts` → GREEN `refresh-token.ts`. CIERRE.
+- [x] 7.1 RED `test/integration/typeorm-refresh-token.int-spec.ts` (`consume` concurrente → uno gana, `bytea` 32, solo hash, `revokeFamilyOf`) → GREEN migración `…-refresh-tokens.ts`, `refresh-token.schema.ts`, `typeorm-refresh-token.repository.ts`.
+- [x] 7.2 Reemplazar el repo en memoria en `auth.module.ts`; RED `src/auth/domain/refresh-token.spec.ts` → GREEN `refresh-token.ts`. CIERRE.
 
 ## U8 — Refresh y logout (PR3)
 
-- [ ] 8.1 RED `src/auth/application/refresh-session.use-case.spec.ts` (rotación, expiración absoluta, gracia 10 s, revocación de familia, otra familia) → GREEN `refresh-session.use-case.ts`.
-- [ ] 8.2 RED `src/auth/application/logout.use-case.spec.ts` (nunca falla) → GREEN `logout.use-case.ts`.
-- [ ] 8.3 RED `test/refresh.e2e-spec.ts` (todos los escenarios de refresh y logout, `Set-Cookie` leído a mano) → GREEN `refresh`/`logout` en `auth.controller.ts`. CIERRE.
+- [x] 8.1 RED `src/auth/application/refresh-session.use-case.spec.ts` (rotación, expiración absoluta, gracia 10 s, revocación de familia, otra familia) → GREEN `refresh-session.use-case.ts`.
+- [x] 8.2 RED `src/auth/application/logout.use-case.spec.ts` (nunca falla) → GREEN `logout.use-case.ts`.
+- [x] 8.3 RED `test/refresh.e2e-spec.ts` (todos los escenarios de refresh y logout, `Set-Cookie` leído a mano) → GREEN `refresh`/`logout` en `auth.controller.ts`. CIERRE.
 
 ## U9 — Disponibilidad (PR4)
 
@@ -126,6 +126,11 @@ Un solo hilo de escritura. Cada PR pasa por revisión de contexto fresco antes d
 - [ ] 10.2 RED `src/cv/infrastructure/s3-cv-link.signer.spec.ts` (presigner inyectado, sin URL en logs) → GREEN `s3-cv-link.signer.ts`; deps `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`.
 - [ ] 10.3 RED `test/cv.e2e-spec.ts` (200, 401, signer invocado 2 veces) → GREEN `cv.controller.ts`, `cv.module.ts`.
 - [ ] 10.4 ADR-012 `openspec/changes/stack-adrs/adrs/ADR-012-*.md` + índice en el README de `stack-adrs` (S3 privado + presign ~5 min). CIERRE.
+
+## Seguimiento (fuera de este cambio)
+
+- [ ] F1. Tarea de limpieza (job programado) que borre de `refresh_tokens` las filas vencidas o revocadas antes de recibir tráfico real: hoy la tabla crece una fila por cada refresh.
+- [ ] F2. Reemplazar la revocación por pasadas (hasta 5) por una tabla `refresh_families` con `revoked_at` propio, para que rotar y revocar compitan por el lock de la misma fila y Postgres garantice el orden sin reintentos.
 
 ## Trazabilidad escenario → tarea
 

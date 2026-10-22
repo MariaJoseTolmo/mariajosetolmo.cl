@@ -8,4 +8,8 @@ export class NestLogger implements Logger {
   error(message: string): void {
     this.logger.error(message);
   }
+
+  warn(message: string): void {
+    this.logger.warn(message);
+  }
 }

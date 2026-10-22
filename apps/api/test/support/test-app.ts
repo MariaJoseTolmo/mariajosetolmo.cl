@@ -18,7 +18,7 @@ import {
 import { InMemoryMagicLinkStore } from '../../src/auth/infrastructure/in-memory/in-memory-magic-link.store';
 import { InMemoryRateLimiter } from '../../src/auth/infrastructure/in-memory/in-memory-rate-limiter';
 import { REFRESH_TOKEN_REPOSITORY } from '../../src/auth/application/ports/refresh-token-repository.port';
-import type { InMemoryRefreshTokenRepository } from '../../src/auth/infrastructure/in-memory/in-memory-refresh-token.repository';
+import { InMemoryRefreshTokenRepository } from '../../src/auth/infrastructure/in-memory/in-memory-refresh-token.repository';
 import { DATA_SOURCE } from '../../src/shared/infrastructure/persistence/data-source.factory';
 import { LOGGER } from '../../src/shared/application/ports/logger.port';
 import { REDIS_CLIENT } from '../../src/shared/infrastructure/redis/redis-client.factory';
@@ -106,6 +106,7 @@ export async function createTestApp(
     ...options.secrets,
   };
   const users = new InMemoryUserRepository();
+  const refresh = new InMemoryRefreshTokenRepository();
   const mail = new CapturingMailSender();
   const logger = new CapturingLogger();
   const store = new InMemoryMagicLinkStore(clock);
@@ -131,7 +132,11 @@ export async function createTestApp(
     .overrideProvider(LOGGER)
     .useValue(logger);
   if (!options.dataSource) {
-    builder = builder.overrideProvider(USER_REPOSITORY).useValue(users);
+    builder = builder
+      .overrideProvider(USER_REPOSITORY)
+      .useValue(users)
+      .overrideProvider(REFRESH_TOKEN_REPOSITORY)
+      .useValue(refresh);
   }
   if (options.config) {
     builder = builder
@@ -149,7 +154,7 @@ export async function createTestApp(
     clock,
     secrets,
     users,
-    refresh: app.get<InMemoryRefreshTokenRepository>(REFRESH_TOKEN_REPOSITORY),
+    refresh,
     mail,
     logger,
     store,

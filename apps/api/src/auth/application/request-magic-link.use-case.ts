@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { describeFailure } from '../../shared/application/describe-failure';
 import { Email } from '../../identity/domain/email';
 import { optionalProfileText } from '../../identity/domain/user';
 import {
@@ -39,13 +40,6 @@ export interface RequestMagicLinkInput {
   readonly company?: unknown;
   readonly name?: unknown;
   readonly ip: string;
-}
-
-/** Names the failure for the log without echoing addresses or provider text. */
-function describeFailure(error: unknown): string {
-  if (!(error instanceof Error)) return 'unknown error';
-  const code = (error as { code?: unknown }).code;
-  return typeof code === 'string' ? `${error.name} ${code}` : error.name;
 }
 
 /**
