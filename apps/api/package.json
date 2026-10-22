@@ -8,19 +8,25 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:cov": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
+    "keys:dev": "node scripts/dev-keys.js",
     "test:e2e": "NODE_OPTIONS=--experimental-vm-modules jest --config test/jest-e2e.config.js"
   },
   "dependencies": {
+    "@aws-sdk/client-ssm": "3.1147.0",
     "@nestjs/common": "12.2.0",
     "@nestjs/core": "12.2.0",
     "@nestjs/platform-express": "12.2.0",
     "@nestjs/swagger": "12.0.2",
+    "cookie-parser": "1.4.7",
+    "jose": "6.2.12",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2"
   },
   "devDependencies": {
     "@nestjs/cli": "12.0.10",
     "@nestjs/testing": "12.2.0",
+    "@types/cookie-parser": "1.4.10",
+    "@types/express": "5.0.6",
     "@types/jest": "30.0.0",
     "@types/node": "24.19.2",
     "@types/supertest": "7.2.1",

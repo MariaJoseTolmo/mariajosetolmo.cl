@@ -18,6 +18,18 @@ const cases = [
     expectViolation: true,
   },
   {
+    name: 'domain imports jose',
+    filePath: `${src}/domain/probe.ts`,
+    code: "import { SignJWT } from 'jose';\nexport const x = SignJWT;\n",
+    expectViolation: true,
+  },
+  {
+    name: 'application imports pg',
+    filePath: `${src}/application/probe.ts`,
+    code: "import { Pool } from 'pg';\nexport const x = Pool;\n",
+    expectViolation: true,
+  },
+  {
     name: 'application imports infrastructure',
     filePath: `${src}/application/probe.ts`,
     code: "import { ProcessProbe } from '../infrastructure/probes/process.probe';\nexport const x = ProcessProbe;\n",

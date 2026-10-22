@@ -1,28 +1,24 @@
-import { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import type { App } from 'supertest/types';
-import { AppModule } from '../src/app.module';
-import { configureApp } from '../src/bootstrap/configure-app';
 import { HEALTH_PROBES } from '../src/health/application/ports/health-probe.port';
+import { createTestApp, type TestApp } from './support/test-app';
 
 describe('health (e2e)', () => {
-  let app: INestApplication;
+  let t: TestApp;
 
-  afterEach(() => app.close());
-
-  const server = (): App => app.getHttpServer() as App;
+  afterEach(() => t.close());
 
   async function createApp(probes?: unknown): Promise<void> {
-    const builder = Test.createTestingModule({ imports: [AppModule] });
-    if (probes) builder.overrideProvider(HEALTH_PROBES).useValue(probes);
-    app = configureApp((await builder.compile()).createNestApplication());
-    await app.init();
+    t = await createTestApp({
+      customize: (builder) =>
+        probes
+          ? builder.overrideProvider(HEALTH_PROBES).useValue(probes)
+          : builder,
+    });
   }
 
   it('GET /api/health returns the contract without caching', async () => {
     await createApp();
-    const res = await request(server()).get('/api/health').expect(200);
+    const res = await request(t.server()).get('/api/health').expect(200);
     expect(res.headers['content-type']).toMatch(/application\/json/);
     expect(res.headers['cache-control']).toBe('no-store');
     expect(res.body).toEqual({
@@ -33,7 +29,7 @@ describe('health (e2e)', () => {
 
   it('GET /health is not found outside the global prefix', async () => {
     await createApp();
-    await request(server()).get('/health').expect(404);
+    await request(t.server()).get('/health').expect(404);
   });
 
   it('reports degraded when a probe is down', async () => {
@@ -41,7 +37,7 @@ describe('health (e2e)', () => {
       { check: () => Promise.resolve({ name: 'process', status: 'ok' }) },
       { check: () => Promise.resolve({ name: 'db', status: 'down' }) },
     ]);
-    const res = await request(server()).get('/api/health').expect(200);
+    const res = await request(t.server()).get('/api/health').expect(200);
     expect((res.body as { status: string }).status).toBe('degraded');
   });
 });

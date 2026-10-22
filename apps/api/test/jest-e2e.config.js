@@ -7,4 +7,5 @@ module.exports = {
     '^.+\\.ts$': ['ts-jest', { tsconfig: '<rootDir>/../tsconfig.json' }],
   },
   testEnvironment: 'node',
+  setupFiles: ['<rootDir>/setup-env.ts'],
 };

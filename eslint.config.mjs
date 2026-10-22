@@ -11,6 +11,10 @@ const frameworkLibs = [
   'typeorm',
   'kafkajs',
   'ioredis',
+  'jose',
+  'nodemailer',
+  'pg',
+  'cookie-parser',
   'reflect-metadata',
   '@aws-sdk/*',
 ];
