@@ -264,3 +264,69 @@ Also updated in `design.md`: port signature (`rotate`), the atomic-statement lis
 Totals after the fixes: 442 unit (44 suites, lines 100 %, branches 94.1 %), 110 e2e (9 suites), 62 integration (6 suites). Gates: lint, lint:boundaries, format:check, typecheck, test:cov, test:e2e, test:int (4 clean runs), build, scan-secrets (exit 0) all green; no dev keys left. Diff size after the fixes: about 2,510 changed lines excluding lockfile and openspec.
 
 Residual note: with `READ COMMITTED` the revocation loop is what closes the lock-wait window; the cap of 5 passes only guards an endless loop (an attacker cannot rotate faster than a pass in practice).
+
+## Batch 4 - PR4 (U9, U10): tasks 9.1-10.4 complete (6/6 of the batch; 28/28 in total, Seguimiento F1/F2 untouched)
+
+Mode: Strict TDD, `size:exception` (user decision), stacked-to-main PR4 on top of merged PR3 (#21). Branch `feat/auth-backend-data-endpoints`.
+
+Safety net before touching existing files: 442 unit (44 suites), 110 e2e (9 suites), 62 integration (6 suites), all green.
+
+Totals after the batch: 472 unit (49 suites; domain/application lines 100 %, all files 100 % lines, branches 94 %), 121 e2e (10 suites), 74 integration (7 suites) against real Postgres and Redis.
+
+RED rule: every RED below was RUN and its failing output recorded before the fix (skeletons wrong on purpose so the failure is behavioral; "compile" marks the two cases where only a type error could be shown).
+
+### TDD Cycle Evidence
+
+| Task | Test file | Layer | Safety net | RED (run, failing output) | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|---------------------------|-------|-------------|----------|
+| 9.1 | `test/integration/typeorm-availability.int-spec.ts`, `migrations.int-spec.ts` | Integration | migrations 14/14 and 62 int before | Skeleton migration (`SELECT 1`) and repo returning empty strings: 12 failed of 12 (`relation "availability" does not exist`; `Expected "[dato de ejemplo]" Received ""`; down-database case `Received promise resolved instead of rejected`). Migrations spec updated to 3 tables: 1 failed (`availability` missing). Registration of the migration in `index.ts` was missing on the first run (a failed edit), so RED included "table absent" | 12/12 and migrations 14/14 after the real migration, repo and registration | Seed is placeholders only in one row; migration re-run after revert does not duplicate; `CHECK (id = 1)` refuses id 2; PK refuses a second id 1; NOT NULL; `updated_at` moves on the documented UPDATE; `COMMENT ON` table and columns; `get` maps `start_label` to `start`; out-of-band UPDATE visible; missing row gives `InfrastructureUnavailable`; database down gives `InfrastructureUnavailable`; lazy DataSource opens on first use; up-down-up now counts three migrations | Unused imports removed; `withDatabase` wraps the missing-row error |
+| 9.2 | `test/postgres-down.e2e-spec.ts` (2 new rows, fake extended for `FROM availability`/`FROM users`) | E2E | e2e 110/110 and the 3 existing rows of the file before | 2 failed: `/me` returned `[dato de ejemplo]` instead of `db modality` (module still bound the in-memory repo); missing row returned 200 instead of 503 | 112/112 whole layer after binding `TypeOrmAvailabilityRepository` in `availability.module.ts` (inject `DATA_SOURCE`) and overriding the port with the in-memory repo in `createTestApp` (unless a stand-in DataSource is passed) | Labels from the table with `start_label` exposed as `start`; the SQL really ran (`FROM availability` captured); missing row 503 with the generic body | `me.e2e-spec.ts` unchanged and green (it uses the in-memory repo through `t.availability`) |
+| 10.1 | `src/cv/application/get-cv-link.use-case.spec.ts`, `src/cv/infrastructure/fake-cv-link.signer.spec.ts` | Unit | N/A (new) | Use case skeleton returning empty strings: 5 failed of 5 (`Received string: ""`, `Expected: 2` calls). Fake signer spec: compile error TS2554 (skeleton `sign()` took no argument) | 7/7 after the real use case and fake signer (13/13 with 10.2) | Clock 10:00 + 300 s and clock 23:59:30 + 60 s; two calls give two different urls and signer called twice; the signer receives the current instant; signer failure passes through unchanged; fake: ttl 300 and 90, counter | None needed |
+| 10.1b | `fake-cv-link.signer.spec.ts` (added after the smoke) | Unit | 17/17 in `src/cv` | Smoke showed `expires=1792666683.17`: 1 failed (`Expected ...expires=1772359500 Received ...1772359500.17`) | 17/17 with `Math.floor` | Milliseconds in the clock input | None needed |
+| 10.2 | `src/cv/infrastructure/s3-cv-link.signer.spec.ts`, `aws-presign.spec.ts` | Unit | N/A (new) | Skeletons (signer returns empty url, presign returns ''): 6 failed of 6 (`calls` empty array; `Expected constructor: InfrastructureUnavailable, Received: Object`) | 6/6 (13/13 for `src/cv`) | Injected presign: bucket/key/ttl/instant forwarded; second object, ttl 45 and instant 2026-12-31; presigns on every call; failure becomes a generic `InfrastructureUnavailable` with no bucket, key or url. Real SDK offline with fake credentials: host `bucket.s3.us-east-1.amazonaws.com`, path, `X-Amz-Expires=300`, `X-Amz-Date=20260301T100000Z`, credential scope, 64-hex signature, secret absent; second case sa-east-1, key with a space (`%20`), ttl 60, other instant, different signature | None needed |
+| 10.2b | `src/cv/infrastructure/cv-link-signer.factory.spec.ts` | Unit | `src/cv` 16/16 | Compile TS2307 (factory did not exist; logic was inline in `cv.module.ts`) | 3/3 | Fake with ttl 90; S3 wired offline through env fake credentials (host, path, expires 120, region from config); s3 without bucket or key refused (`CV_BUCKET`, `CV_OBJECT_KEY`) | Factory moved out of the module so it is testable |
+| (10.x config) | `src/config/app-config.spec.ts` | Unit | 30/30 before | Added type and a wrong skeleton: 11 failed (`cv` defaults, s3 fields, bucket/key required, invalid signer, 5 invalid lifetimes, ssm rejects fake) | 41/41 (67/67 across `src/config`) | Defaults; s3 with custom ttl; missing bucket and key; signer `gcs`/`S3`/empty; ttl `0`, `-5`, `1.5`, `abc`, `3601`; bounds 1 and 3600; deployed (ssm) with fake or unset signer refused; existing ssm rows updated to a valid s3 config | `parseCv`/`parseCvTtl` helpers |
+| 10.3 | `test/cv.e2e-spec.ts` | E2E | e2e 112/112 before | 9 failed of 9 (all answered 404; docs row `Received has value: undefined`) | 121/121 whole layer after `cv.controller.ts`, `cv-link-response.dto.ts`, `cv.module.ts` and `CvModule` in `AppModule` | Exact keys, `no-store`, `expiresAt` = clock + 300 s; ADMIN and clock advanced 120 s; two requests give two links; 401 JSON without session and with a garbage cookie, signer never called; url absent from logs; documented in `docs-json` (no admin, no signature text); default local config serves the example link; signer failure gives 503 with the generic body | None needed |
+| 10.4 | Docs: `ADR-012-s3-privado-url-prefirmada-cv.md`, `stack-adrs/README.md` index and README table | N/A | N/A | N/A | N/A | N/A | N/A |
+
+### Test Summary
+
+- New tests in the batch: 30 unit (442 to 472), 11 e2e (110 to 121), 12 integration (62 to 74; the migrations spec only had one expectation edited).
+- Layers: Unit, E2E, Integration (real Postgres for the availability table).
+- Mocks: none (`jest.mock` not used); hand-written fakes only. The S3 presigner is tested both injected and through the real SDK with no network.
+- Approval tests: none; edits to existing behavior were additive (config, test-app binding, migrations count).
+
+### Gates (final run, after the last change)
+
+`lint` OK; `lint:boundaries` OK; `format:check` OK; `typecheck` OK; `npm test -w apps/api` 472/472; `test:cov` 100 % lines (all files), branches 94 %; `test:e2e` 121/121; `test:int` 74/74; `build` OK; `scan-secrets.sh` exit 0 (dev key deleted).
+
+Manual runtime proof (built `dist`, real Postgres, Redis and Mailpit, throwaway schema, `COOKIE_SECURE=false`, `CV_SIGNER=fake`): `migration:run` applied the availability migration (seed row of placeholders); magic-link 202; verify 204; `/me` 200 with `availability` placeholders; `/cv` 200 `{url, expiresAt}` (first run exposed the fractional `expires=...17`, fixed as 10.1b); `/cv` without session 401; refresh 204; `/me` after refresh 200; logout 204; refresh after logout 401; after an out-of-band `UPDATE` of `modality` a new login showed the new value; docs list `/api/v1/cv` and `/api/v1/me` and no `/admin`; the server log had no error lines and no URL. Schema dropped, dev key deleted.
+
+### Dependencies added (exact; both published 2026-10-06, 16 days before 2026-10-22; same release train as `client-ssm`/`client-sesv2` 3.1147.0)
+
+| Package | Version | Where |
+|---------|---------|-------|
+| `@aws-sdk/client-s3` | 3.1147.0 | dependencies |
+| `@aws-sdk/s3-request-presigner` | 3.1147.0 | dependencies |
+
+### Deviations from tasks/design (PR4)
+
+1. No `availability.schema.ts` (EntitySchema), same reason as `users` (PR2): the repository runs one parameterised SQL and the table is defined by the migration.
+2. Missing `availability` row (spec silent): `GET /api/v1/me` answers 503 with the generic body instead of inventing values or returning empty strings. Recorded in `design.md` section 17.
+3. Task 9.2 says to replace the binding "in `identity.module.ts`"; the binding lives in `availability.module.ts` (the in-memory repo was provided there), so that is where it changed.
+4. New config (design section 10 already named `CV_SIGNER`, `CV_BUCKET`, `CV_OBJECT_KEY`): `CV_LINK_TTL_SECONDS` (1 to 3600, default 300). With `SECRETS_SOURCE=ssm` the `fake` signer is refused at boot. Bucket and key come from plain config (not secrets); the bucket name is not sensitive.
+5. `Presign` port takes `signingDate` so the URL and `expiresAt` are computed from the same instant (the app clock), which also makes the real SDK output deterministic in tests.
+6. `aws-presign.ts` and `cv-link-signer.factory.ts` are separate files (not in the design tree) to keep the module wiring testable.
+7. ADR-012 status is "Propuesta": the bucket and the role do not exist yet, and the claim about presigned URLs and temporary credentials is marked NO VERIFICADO.
+8. `.env.example` gained the CV block (`CV_SIGNER=fake`, `CV_LINK_TTL_SECONDS=300`, bucket/key commented placeholders).
+9. Gate C3 (fresh-context review) and the CIERRE checkboxes are left for the orchestrator.
+
+### Workload / PR boundary
+
+- Mode: stacked PR slice with `size:exception` (user decision), PR4 = U9-U10, base `main` (PR3 merged).
+- Boundary: starts at `main` with sessions over Postgres (users, refresh_tokens) and an in-memory availability repo; ends with the `availability` migration and repo bound at runtime, `GET /api/v1/cv` with the `CvLinkSigner` port (fake locally, S3 presigned in deployed environments) and ADR-012. Rollback: `git revert` of the PR plus `npm run migration:revert -w apps/api` (one migration, `availability`).
+- Size: about 1,140 changed lines excluding lockfile and openspec (about 400 production/config, about 740 tests and support), far above the 400 budget and the forecast of ~460; `size:exception` applies.
+
+### Remaining
+
+Nothing in U1-U10. Seguimiento F1 and F2 stay open (out of this change).

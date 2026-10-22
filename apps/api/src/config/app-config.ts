@@ -26,6 +26,13 @@ export type MailConfig =
     }
   | { readonly transport: 'ses'; readonly from: string };
 
+export interface CvConfig {
+  readonly signer: 'fake' | 's3';
+  readonly bucket: string | null;
+  readonly objectKey: string | null;
+  readonly ttlSeconds: number;
+}
+
 export interface AppConfig {
   readonly allowedOrigins: readonly string[];
   readonly cookieSecure: boolean;
@@ -38,6 +45,7 @@ export interface AppConfig {
   readonly magicLinkBaseUrl: string;
   readonly mail: MailConfig;
   readonly rateLimits: RateLimits;
+  readonly cv: CvConfig;
 }
 
 export class ConfigError extends Error {
@@ -49,6 +57,9 @@ export class ConfigError extends Error {
 
 const DEFAULT_WINDOW_SECONDS = 15 * 60;
 const DEFAULT_JWT_AUDIENCE = 'web_cv-api';
+const DEFAULT_CV_TTL_SECONDS = 300;
+// S3 allows far longer, but a CV link is meant to be opened right away.
+const MAX_CV_TTL_SECONDS = 3600;
 
 const DEFAULT_RATE_LIMITS: RateLimits = {
   magicLinkIp: { limit: 10, windowSeconds: DEFAULT_WINDOW_SECONDS },
@@ -124,6 +135,37 @@ function parseMail(env: Env): MailConfig {
     from,
     smtpHost: required(env, 'SMTP_HOST'),
     smtpPort: parsePort(env, 'SMTP_PORT'),
+  };
+}
+
+function parseCvTtl(env: Env): number {
+  const raw = optional(env, 'CV_LINK_TTL_SECONDS');
+  if (raw === null) return DEFAULT_CV_TTL_SECONDS;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 1 || value > MAX_CV_TTL_SECONDS) {
+    throw new ConfigError(
+      'CV_LINK_TTL_SECONDS',
+      `must be a whole number of seconds between 1 and ${MAX_CV_TTL_SECONDS}`,
+    );
+  }
+  return value;
+}
+
+function parseCv(env: Env, secretsSource: SecretsSource): CvConfig {
+  const signer = oneOf(env, 'CV_SIGNER', ['fake', 's3'], 'fake');
+  // SSM secrets mark a deployed environment: it never serves example links.
+  if (signer === 'fake' && secretsSource === 'ssm') {
+    throw new ConfigError('CV_SIGNER', 'must be "s3" when SECRETS_SOURCE=ssm');
+  }
+  const ttlSeconds = parseCvTtl(env);
+  if (signer === 'fake') {
+    return { signer, bucket: null, objectKey: null, ttlSeconds };
+  }
+  return {
+    signer,
+    bucket: required(env, 'CV_BUCKET'),
+    objectKey: required(env, 'CV_OBJECT_KEY'),
+    ttlSeconds,
   };
 }
 
@@ -208,5 +250,6 @@ export function loadConfig(env: Env): AppConfig {
     magicLinkBaseUrl: parseUrl(env, 'MAGIC_LINK_BASE_URL'),
     mail: parseMail(env),
     rateLimits: parseRateLimits(env),
+    cv: parseCv(env, secretsSource),
   };
 }

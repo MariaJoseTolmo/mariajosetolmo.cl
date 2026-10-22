@@ -22,16 +22,18 @@ describe('migrations (real Postgres)', () => {
 
   it('goes up, down and up again', async () => {
     await db.dataSource.runMigrations();
-    expect(await tables()).toEqual(['refresh_tokens', 'users']);
+    expect(await tables()).toEqual(['availability', 'refresh_tokens', 'users']);
 
     // Each `down` undoes only its own migration, newest first.
+    await db.dataSource.undoLastMigration();
+    expect(await tables()).toEqual(['refresh_tokens', 'users']);
     await db.dataSource.undoLastMigration();
     expect(await tables()).toEqual(['users']);
     await db.dataSource.undoLastMigration();
     expect(await tables()).toEqual([]);
 
     await db.dataSource.runMigrations();
-    expect(await tables()).toEqual(['refresh_tokens', 'users']);
+    expect(await tables()).toEqual(['availability', 'refresh_tokens', 'users']);
   });
 
   it('is idempotent: running again applies nothing new', async () => {

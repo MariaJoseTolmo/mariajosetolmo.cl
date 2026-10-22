@@ -117,20 +117,21 @@ Un solo hilo de escritura. Cada PR pasa por revisión de contexto fresco antes d
 
 ## U9 — Disponibilidad (PR4)
 
-- [ ] 9.1 RED `test/integration/typeorm-availability.int-spec.ts` (seed placeholder `[dato de ejemplo]`, `CHECK id=1`) → GREEN migración `…-availability.ts`, `availability.schema.ts`, `typeorm-availability.repository.ts`, `availability.module.ts`.
-- [ ] 9.2 Reemplazar el repo en memoria en `identity.module.ts`; `me.e2e-spec.ts` sigue verde. CIERRE.
+- [x] 9.1 RED `test/integration/typeorm-availability.int-spec.ts` (seed placeholder `[dato de ejemplo]`, `CHECK id=1`) → GREEN migración `…-availability.ts`, `availability.schema.ts`, `typeorm-availability.repository.ts`, `availability.module.ts`.
+- [x] 9.2 Reemplazar el repo en memoria en `identity.module.ts`; `me.e2e-spec.ts` sigue verde. CIERRE.
 
 ## U10 — CV (PR4)
 
-- [ ] 10.1 RED `src/cv/application/get-cv-link.use-case.spec.ts` (300 s, un signer por petición) → GREEN `get-cv-link.use-case.ts`, `fake-cv-link.signer.ts`.
-- [ ] 10.2 RED `src/cv/infrastructure/s3-cv-link.signer.spec.ts` (presigner inyectado, sin URL en logs) → GREEN `s3-cv-link.signer.ts`; deps `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`.
-- [ ] 10.3 RED `test/cv.e2e-spec.ts` (200, 401, signer invocado 2 veces) → GREEN `cv.controller.ts`, `cv.module.ts`.
-- [ ] 10.4 ADR-012 `openspec/changes/stack-adrs/adrs/ADR-012-*.md` + índice en el README de `stack-adrs` (S3 privado + presign ~5 min). CIERRE.
+- [x] 10.1 RED `src/cv/application/get-cv-link.use-case.spec.ts` (300 s, un signer por petición) → GREEN `get-cv-link.use-case.ts`, `fake-cv-link.signer.ts`.
+- [x] 10.2 RED `src/cv/infrastructure/s3-cv-link.signer.spec.ts` (presigner inyectado, sin URL en logs) → GREEN `s3-cv-link.signer.ts`; deps `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`.
+- [x] 10.3 RED `test/cv.e2e-spec.ts` (200, 401, signer invocado 2 veces) → GREEN `cv.controller.ts`, `cv.module.ts`.
+- [x] 10.4 ADR-012 `openspec/changes/stack-adrs/adrs/ADR-012-*.md` + índice en el README de `stack-adrs` (S3 privado + presign ~5 min). CIERRE.
 
 ## Seguimiento (fuera de este cambio)
 
 - [ ] F1. Tarea de limpieza (job programado) que borre de `refresh_tokens` las filas vencidas o revocadas antes de recibir tráfico real: hoy la tabla crece una fila por cada refresh.
 - [ ] F2. Reemplazar la revocación por pasadas (hasta 5) por una tabla `refresh_families` con `revoked_at` propio, para que rotar y revocar compitan por el lock de la misma fila y Postgres garantice el orden sin reintentos.
+- [ ] F3. Agregar al checklist de deploy (o a un smoke test posterior al deploy) una verificación que falle si la fila de `availability` todavía tiene los valores de ejemplo `[dato de ejemplo]`.
 
 ## Trazabilidad escenario → tarea
 
