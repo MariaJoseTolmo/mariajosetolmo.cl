@@ -1,9 +1,6 @@
-import { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import type { App } from 'supertest/types';
-import { AppModule } from '../src/app.module';
-import { configureApp } from '../src/bootstrap/configure-app';
+import { createTestApp, type TestApp } from './support/test-app';
 
 interface SchemaWithStatus {
   properties: { status: { enum: string[] } };
@@ -15,19 +12,15 @@ interface OpenApiDocument {
 }
 
 describe('docs (e2e)', () => {
-  let app: INestApplication;
+  let t: TestApp;
 
   beforeEach(async () => {
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-    app = configureApp(moduleRef.createNestApplication());
-    await app.init();
+    t = await createTestApp();
   });
 
-  afterEach(() => app.close());
+  afterEach(() => t.close());
 
-  const server = (): App => app.getHttpServer() as App;
+  const server = (): App => t.server();
 
   it('GET /api/docs serves the Swagger UI as HTML', async () => {
     const res = await request(server()).get('/api/docs').expect(200);
