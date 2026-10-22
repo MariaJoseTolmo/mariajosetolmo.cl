@@ -131,8 +131,11 @@ export async function createTestApp(
     .useValue(mail)
     .overrideProvider(LOGGER)
     .useValue(logger);
+  const availability = new InMemoryAvailabilityRepository();
   if (!options.dataSource) {
     builder = builder
+      .overrideProvider(AVAILABILITY_REPOSITORY)
+      .useValue(availability)
       .overrideProvider(USER_REPOSITORY)
       .useValue(users)
       .overrideProvider(REFRESH_TOKEN_REPOSITORY)
@@ -158,9 +161,7 @@ export async function createTestApp(
     mail,
     logger,
     store,
-    availability: app.get<InMemoryAvailabilityRepository>(
-      AVAILABILITY_REPOSITORY,
-    ),
+    availability,
     async login(user: TestUser = {}) {
       const id = user.id ?? 'user-1';
       const role = user.role ?? 'RECRUITER';

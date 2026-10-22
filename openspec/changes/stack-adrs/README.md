@@ -17,6 +17,7 @@ Registro de las tecnologías que **no** figuran en mi CV (regla 2 de `docs/brief
 | [ADR-009](adrs/ADR-009-lambda-web-functions-oac.md) | Lambda Web Functions + CloudFront OAC | Propuesta (condicionada al infra-spike) | Nueva |
 | [ADR-010](adrs/ADR-010-region-us-east-1.md) | Región us-east-1 | Propuesta (latencia desde Chile por medir) | Nueva |
 | [ADR-011](adrs/ADR-011-jest-experimental-vm-modules.md) | Jest con `--experimental-vm-modules` para Nest 12 | Aceptada | Jest en producción; flag nuevo |
+| [ADR-012](adrs/ADR-012-s3-privado-url-prefirmada-cv.md) | S3 privado con URL prefirmada para entregar el CV | Propuesta (infraestructura pendiente) | Nueva |
 
 ## Pendientes antes de cerrar
 
@@ -39,5 +40,6 @@ El README del repo resume cada pieza nueva en una línea (regla 3 del brief). Ca
 | SSM Parameter Store | ADR-008 |
 | AWS Lambda | ADR-009, ADR-010 |
 | Jest con `--experimental-vm-modules` | ADR-011 |
+| S3 privado con URL prefirmada (CV) | ADR-012 |
 
 Mailpit, `apache/kafka` en KRaft, Redis 8 en local y gitleaks son herramientas de desarrollo: se documentan solo en el README, sin ADR propio. Hoy el README agrupa "Next.js, S3 + CloudFront, Lambda, SES, SQS y SSM" como planeadas; cuando estos ADR se acepten, esa línea se reemplaza por una línea por pieza con su enlace.

@@ -8,6 +8,11 @@ class FlakyDataSource {
   isInitialized = false;
   up = false;
   initializeCalls = 0;
+  availabilityRow: Record<string, string> | null = {
+    modality: 'db modality',
+    start_label: 'db start',
+    salary: 'db salary',
+  };
   readonly statements: { sql: string; params: unknown[] }[] = [];
 
   initialize(): Promise<this> {
@@ -20,7 +25,14 @@ class FlakyDataSource {
 
   query(sql: string, params: unknown[] = []): Promise<unknown[]> {
     this.statements.push({ sql, params });
-    if (!sql.includes('INSERT INTO users')) return Promise.resolve([]);
+    if (sql.includes('FROM availability')) {
+      return Promise.resolve(
+        this.availabilityRow ? [this.availabilityRow] : [],
+      );
+    }
+    if (!sql.includes('INSERT INTO users') && !sql.includes('FROM users')) {
+      return Promise.resolve([]);
+    }
     return Promise.resolve([
       {
         id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -106,5 +118,49 @@ describe('Postgres unreachable at boot', () => {
     expect(inserts).toHaveLength(1);
     expect(inserts[0]?.params).toContain(sha256Hex(refresh ?? ''));
     expect(JSON.stringify(inserts[0]?.params)).not.toContain(refresh);
+  });
+
+  describe('availability in GET /api/v1/me', () => {
+    const signIn = async (): Promise<string> => {
+      const res = await verifyNewLink();
+      expect(res.status).toBe(204);
+      const cookies = res.headers['set-cookie'] as unknown as string[];
+      return cookies
+        .map((c) => c.split(';')[0] ?? '')
+        .filter((c) => c.startsWith('__Host-access='))
+        .join('; ');
+    };
+
+    it('reads the labels from the table, start_label exposed as start', async () => {
+      db.up = true;
+      const cookie = await signIn();
+      const res = await request(t.server())
+        .get('/api/v1/me')
+        .set('Cookie', cookie)
+        .expect(200);
+      expect((res.body as { availability: unknown }).availability).toEqual({
+        modality: 'db modality',
+        start: 'db start',
+        salary: 'db salary',
+      });
+      expect(
+        db.statements.some((s) => s.sql.includes('FROM availability')),
+      ).toBe(true);
+    });
+
+    it('answers 503 with a generic body when the availability row is missing', async () => {
+      db.up = true;
+      const cookie = await signIn();
+      db.availabilityRow = null;
+      const res = await request(t.server())
+        .get('/api/v1/me')
+        .set('Cookie', cookie);
+      expect(res.status).toBe(503);
+      expect(res.body).toEqual({
+        statusCode: 503,
+        error: 'Service Unavailable',
+        message: 'Service temporarily unavailable',
+      });
+    });
   });
 });

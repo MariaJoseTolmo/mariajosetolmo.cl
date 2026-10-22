@@ -9,6 +9,12 @@ const BASE_ENV = {
   SMTP_PORT: '1025',
 };
 
+const S3_CV = {
+  CV_SIGNER: 's3',
+  CV_BUCKET: 'example-cv-bucket',
+  CV_OBJECT_KEY: 'cv/example.pdf',
+};
+
 describe('loadConfig', () => {
   it('parses a minimal environment and applies safe defaults', () => {
     const config = loadConfig(BASE_ENV);
@@ -33,6 +39,12 @@ describe('loadConfig', () => {
         magicLinkEmail: { limit: 3, windowSeconds: 900 },
         verifyIp: { limit: 20, windowSeconds: 900 },
         refreshIp: { limit: 60, windowSeconds: 900 },
+      },
+      cv: {
+        signer: 'fake',
+        bucket: null,
+        objectKey: null,
+        ttlSeconds: 300,
       },
     });
   });
@@ -109,6 +121,7 @@ describe('loadConfig', () => {
       SECRETS_SOURCE: 'ssm',
       SSM_PREFIX: '/example/prod',
       AWS_REGION: 'us-east-1',
+      ...S3_CV,
     });
     expect(config.secretsSource).toBe('ssm');
     expect(config.ssmPrefix).toBe('/example/prod');
@@ -161,6 +174,7 @@ describe('loadConfig', () => {
       ...BASE_ENV,
       SECRETS_SOURCE: 'ssm',
       SSM_PREFIX: '/example/prod',
+      ...S3_CV,
     };
 
     it('rejects CLIENT_IP_SOURCE=socket', () => {
@@ -181,6 +195,15 @@ describe('loadConfig', () => {
       expect(config.clientIpSource).toBe('cloudfront');
     });
 
+    it('rejects the fake CV signer (a deployed environment never serves example links)', () => {
+      expect(() => loadConfig({ ...prod, CV_SIGNER: 'fake' })).toThrow(
+        /CV_SIGNER/,
+      );
+      expect(() => loadConfig({ ...prod, CV_SIGNER: undefined })).toThrow(
+        /CV_SIGNER/,
+      );
+    });
+
     it('still allows socket and insecure cookies with env secrets (local)', () => {
       const config = loadConfig({
         ...BASE_ENV,
@@ -189,6 +212,72 @@ describe('loadConfig', () => {
       });
       expect(config.clientIpSource).toBe('socket');
       expect(config.cookieSecure).toBe(false);
+    });
+  });
+
+  describe('CV link', () => {
+    it('defaults to the fake signer with a 300 s lifetime and needs no bucket', () => {
+      const { cv } = loadConfig(BASE_ENV);
+      expect(cv).toEqual({
+        signer: 'fake',
+        bucket: null,
+        objectKey: null,
+        ttlSeconds: 300,
+      });
+    });
+
+    it('reads the s3 signer with its bucket, key and a custom lifetime', () => {
+      const { cv } = loadConfig({
+        ...BASE_ENV,
+        ...S3_CV,
+        CV_LINK_TTL_SECONDS: '120',
+      });
+      expect(cv).toEqual({
+        signer: 's3',
+        bucket: 'example-cv-bucket',
+        objectKey: 'cv/example.pdf',
+        ttlSeconds: 120,
+      });
+    });
+
+    it('requires the bucket and the object key for s3', () => {
+      expect(() =>
+        loadConfig({ ...BASE_ENV, ...S3_CV, CV_BUCKET: undefined }),
+      ).toThrow(/CV_BUCKET/);
+      expect(() =>
+        loadConfig({ ...BASE_ENV, ...S3_CV, CV_OBJECT_KEY: '  ' }),
+      ).toThrow(/CV_OBJECT_KEY/);
+    });
+
+    it.each(['gcs', 'S3', ''])('rejects the signer %p', (value) => {
+      // An empty value falls back to the default, the others are refused.
+      if (value === '') {
+        expect(loadConfig({ ...BASE_ENV, CV_SIGNER: value }).cv.signer).toBe(
+          'fake',
+        );
+        return;
+      }
+      expect(() => loadConfig({ ...BASE_ENV, CV_SIGNER: value })).toThrow(
+        /CV_SIGNER/,
+      );
+    });
+
+    it.each(['0', '-5', '1.5', 'abc', '3601'])(
+      'rejects the lifetime %p',
+      (value) => {
+        expect(() =>
+          loadConfig({ ...BASE_ENV, CV_LINK_TTL_SECONDS: value }),
+        ).toThrow(/CV_LINK_TTL_SECONDS/);
+      },
+    );
+
+    it('accepts the bounds of the lifetime', () => {
+      expect(
+        loadConfig({ ...BASE_ENV, CV_LINK_TTL_SECONDS: '1' }).cv.ttlSeconds,
+      ).toBe(1);
+      expect(
+        loadConfig({ ...BASE_ENV, CV_LINK_TTL_SECONDS: '3600' }).cv.ttlSeconds,
+      ).toBe(3600);
     });
   });
 });
