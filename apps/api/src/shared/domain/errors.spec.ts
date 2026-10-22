@@ -2,6 +2,7 @@ import {
   DomainError,
   Forbidden,
   InfrastructureUnavailable,
+  RateLimited,
   InvalidInput,
   Unauthenticated,
 } from './errors';
@@ -43,5 +44,13 @@ describe('domain errors', () => {
     expect(error).toBeInstanceOf(DomainError);
     expect(error.code).toBe('UNAUTHENTICATED');
     expect(error.message).toBe('Authentication required');
+  });
+
+  it('RateLimited carries when to retry and a generic message', () => {
+    const error = new RateLimited(120);
+    expect(error).toBeInstanceOf(DomainError);
+    expect(error.code).toBe('RATE_LIMITED');
+    expect(error.retryAfterSeconds).toBe(120);
+    expect(error.message).toBe('Too many requests');
   });
 });

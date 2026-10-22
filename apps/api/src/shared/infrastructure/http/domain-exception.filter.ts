@@ -5,10 +5,11 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { DomainError } from '../../domain/errors';
+import { DomainError, RateLimited } from '../../domain/errors';
 
 interface JsonResponse {
   status(code: number): JsonResponse;
+  setHeader(name: string, value: string): unknown;
   json(body: unknown): unknown;
 }
 
@@ -17,6 +18,7 @@ const STATUS_BY_CODE: Readonly<Record<string, HttpStatus>> = {
   INVALID_INPUT: HttpStatus.BAD_REQUEST,
   UNAUTHENTICATED: HttpStatus.UNAUTHORIZED,
   FORBIDDEN: HttpStatus.FORBIDDEN,
+  RATE_LIMITED: HttpStatus.TOO_MANY_REQUESTS,
   INFRASTRUCTURE_UNAVAILABLE: HttpStatus.SERVICE_UNAVAILABLE,
 };
 
@@ -24,6 +26,7 @@ const REASON: Readonly<Record<number, string>> = {
   [HttpStatus.BAD_REQUEST]: 'Bad Request',
   [HttpStatus.UNAUTHORIZED]: 'Unauthorized',
   [HttpStatus.FORBIDDEN]: 'Forbidden',
+  [HttpStatus.TOO_MANY_REQUESTS]: 'Too Many Requests',
   [HttpStatus.INTERNAL_SERVER_ERROR]: 'Internal Server Error',
   [HttpStatus.SERVICE_UNAVAILABLE]: 'Service Unavailable',
 };
@@ -45,9 +48,11 @@ export class DomainExceptionFilter implements ExceptionFilter<DomainError> {
       status === HttpStatus.INTERNAL_SERVER_ERROR
         ? 'Internal server error'
         : error.message;
-    host
-      .switchToHttp()
-      .getResponse<JsonResponse>()
+    const res = host.switchToHttp().getResponse<JsonResponse>();
+    if (error instanceof RateLimited) {
+      res.setHeader('Retry-After', String(error.retryAfterSeconds));
+    }
+    res
       .status(status)
       .json({ statusCode: status, error: REASON[status], message });
   }

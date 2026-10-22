@@ -12,6 +12,7 @@ describe('Email', () => {
     'a@b.co',
     'first.last+tag@sub.example.test',
     "o'brien@example.test",
+    '{a}!#$%&*/=?^_`|~-x@example.test',
   ])('accepts %s', (raw) => {
     expect(Email.parse(raw).value).toBe(raw.toLowerCase());
   });
@@ -28,6 +29,22 @@ describe('Email', () => {
     'user@exa mple.test',
     'user@example..test',
     'a@b.c',
+    // Address-list separators and header syntax: nodemailer would deliver
+    // these to a second recipient, bypassing the per-email limit.
+    'x,victim@example.test',
+    'x;victim@example.test',
+    'x<victim@example.test',
+    'x>victim@example.test',
+    '"x"@example.test',
+    'x"y@example.test',
+    'x(y)@example.test',
+    'x[y]@example.test',
+    'x:y@example.test',
+    'x\\y@example.test',
+    '.x@example.test',
+    'x.@example.test',
+    'x..y@example.test',
+    'é@example.test',
   ])('rejects %j with InvalidInput', (raw) => {
     expect(() => Email.parse(raw)).toThrow(InvalidInput);
   });

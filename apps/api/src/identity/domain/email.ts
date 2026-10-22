@@ -1,9 +1,13 @@
 import { InvalidInput } from '../../shared/domain/errors';
 
 const MAX_LENGTH = 254;
-// Pragmatic, not RFC 5322: local@label(.label)+ with a 2+ letter TLD.
-const PATTERN =
-  /^[^\s@]+@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9-]*[a-z]{2,}[a-z0-9-]*$/;
+// Pragmatic, not RFC 5322. The local part is RFC 5322 `atext` dot-atoms only:
+// no quotes, comments, commas, semicolons or angle brackets, which mail
+// libraries read as extra recipients or display names.
+const ATEXT = "[a-z0-9!#$%&'*+/=?^_`{|}~-]+";
+const PATTERN = new RegExp(
+  `^${ATEXT}(?:\\.${ATEXT})*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9-]*[a-z]{2,}[a-z0-9-]*$`,
+);
 // eslint-disable-next-line no-control-regex
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/;
 

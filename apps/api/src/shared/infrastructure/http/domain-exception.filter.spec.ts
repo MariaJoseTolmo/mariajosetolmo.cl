@@ -4,6 +4,7 @@ import {
   Forbidden,
   InfrastructureUnavailable,
   InvalidInput,
+  RateLimited,
   Unauthenticated,
 } from '../../domain/errors';
 import { DomainExceptionFilter } from './domain-exception.filter';
@@ -15,12 +16,17 @@ class UnmappedError extends DomainError {
 interface Captured {
   status?: number;
   body?: unknown;
+  headers: Record<string, string>;
 }
 
 function hostFor(captured: Captured): ArgumentsHost {
   const res = {
     status(code: number) {
       captured.status = code;
+      return res;
+    },
+    setHeader(name: string, value: string) {
+      captured.headers[name] = value;
       return res;
     },
     json(body: unknown) {
@@ -34,7 +40,7 @@ function hostFor(captured: Captured): ArgumentsHost {
 }
 
 function run(error: DomainError): { captured: Captured; logged: unknown[] } {
-  const captured: Captured = {};
+  const captured: Captured = { headers: {} };
   const logged: unknown[] = [];
   new DomainExceptionFilter({
     error: (message: unknown) => logged.push(message),
@@ -60,6 +66,21 @@ describe('DomainExceptionFilter', () => {
       error: reason,
       message,
     });
+  });
+
+  it('answers 429 with Retry-After taken from the error', () => {
+    const { captured } = run(new RateLimited(754));
+    expect(captured.status).toBe(429);
+    expect(captured.headers).toEqual({ 'Retry-After': '754' });
+    expect(captured.body).toEqual({
+      statusCode: 429,
+      error: 'Too Many Requests',
+      message: 'Too many requests',
+    });
+  });
+
+  it('sets no Retry-After on other errors', () => {
+    expect(run(new Forbidden('no')).captured.headers).toEqual({});
   });
 
   it('answers 503 with a generic body and never leaks the cause', () => {
