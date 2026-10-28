@@ -20,6 +20,11 @@ describe('TypeOrmAvailabilityRepository (real Postgres)', () => {
   });
   afterAll(() => db.close());
 
+  async function isApplied(migrationName: string): Promise<boolean> {
+    const rows = await db.query('SELECT name FROM migrations');
+    return rows.some((r) => String(r['name']).startsWith(migrationName));
+  }
+
   describe('seed', () => {
     it('ships placeholders only, in the single row', async () => {
       const rows = await db.query(
@@ -36,8 +41,13 @@ describe('TypeOrmAvailabilityRepository (real Postgres)', () => {
     });
 
     it('is not duplicated when the migration is applied again after a revert', async () => {
-      await db.dataSource.undoLastMigration();
+      // Revert newest-first until availability is gone, whatever sits on top.
+      while (await isApplied('CreateAvailability')) {
+        await db.dataSource.undoLastMigration();
+      }
+      expect(await isApplied('CreateAvailability')).toBe(false);
       await db.dataSource.runMigrations();
+      expect(await isApplied('CreateAvailability')).toBe(true);
       const [count] = await db.query(
         'SELECT count(*)::int AS n FROM availability',
       );

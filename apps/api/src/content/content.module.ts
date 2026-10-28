@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
+import type { DataSource } from 'typeorm';
+import { DATA_SOURCE } from '../shared/infrastructure/persistence/data-source.factory';
 import { GetProfile } from './application/get-profile.use-case';
 import { ListExperience } from './application/list-experience.use-case';
 import { ListSkills } from './application/list-skills.use-case';
 import { CONTENT_REPOSITORY } from './application/ports/content-repository.port';
 import { ContentController } from './infrastructure/http/content.controller';
-import { InMemoryContentRepository } from './infrastructure/persistence/in-memory-content.repository';
+import { TypeOrmContentRepository } from './infrastructure/persistence/typeorm-content.repository';
 
 @Module({
   controllers: [ContentController],
@@ -12,10 +14,11 @@ import { InMemoryContentRepository } from './infrastructure/persistence/in-memor
     GetProfile,
     ListExperience,
     ListSkills,
-    // Empty stand-in until the Postgres adapter is wired (design E7).
     {
       provide: CONTENT_REPOSITORY,
-      useFactory: () => new InMemoryContentRepository(),
+      useFactory: (dataSource: DataSource) =>
+        new TypeOrmContentRepository(dataSource),
+      inject: [DATA_SOURCE],
     },
   ],
 })
