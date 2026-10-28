@@ -121,3 +121,13 @@ Tres ajustes aprobados tras la revisión. Modo TDD estricto.
 
 - API unit: 57 suites, 583 tests. e2e: 11 suites, 164. Integración: 9 suites, 104. Web: 1196 tests.
 - eslint (`apps/api apps/web`, max-warnings 0), typecheck API y web, prettier, build API: verdes.
+
+## Fixes de verify
+
+Modo TDD estricto. Hallazgos S1, S3 y W5 del verify-report.
+
+| Fix | Archivo(s) | RED | GREEN | Notas |
+|-----|-----------|-----|-------|-------|
+| S1 | `list-skills.use-case.ts`, `list-skills.use-case.spec.ts` | Caso nuevo con puerto que devuelve `[]` para `learning`: fallo en runtime (recibe `{levels: []}`) | 7/7 en el spec | Con nivel válido siempre devuelve `groups[0] ?? {level, skills: []}`; sin nivel, `{levels: groups}`. |
+| S3 | `test/support/content-rules.spec.ts` | Con expectativas deliberadamente erróneas (4 mensajes de drift, regla de email y patrón de monto): 9 fallos en runtime | 40/40 tras restaurar | Los casos negativos de drift comparan el mensaje exacto; los de `contentViolations` exigen que coincida la regla esperada (columna nueva en la tabla); los de placeholders exigen la regla `\$\s?\d`. |
+| W5 | `tasks.md` | n/a | n/a | C1–C3 marcadas con evidencia del verify-report (size:exception registrado, comandos en verde, cobertura 100 %, gitleaks limpio, verify como revisión de contexto fresco). Los criterios de éxito de `proposal.md` no se tocaron. |

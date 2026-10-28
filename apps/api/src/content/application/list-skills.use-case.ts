@@ -21,8 +21,7 @@ export class ListSkills {
   async execute(input: ListSkillsInput): Promise<SkillsResult> {
     const level = SkillLevel.parse(input.level);
     const groups = await this.content.listSkills(level);
-    const [first] = groups;
-    if (level !== null && first) return first;
-    return { levels: groups };
+    if (level === null) return { levels: groups };
+    return groups[0] ?? { level, skills: [] };
   }
 }

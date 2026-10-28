@@ -26,6 +26,14 @@ describe('ListSkills', () => {
     });
   });
 
+  it('returns an empty group when the port returns no groups for a valid level', async () => {
+    const emptyPort = new InMemoryContentRepository({ skills: [] });
+    jest.spyOn(emptyPort, 'listSkills').mockResolvedValue([]);
+    await expect(
+      new ListSkills(emptyPort).execute({ level: 'learning' }),
+    ).resolves.toEqual({ level: 'learning', skills: [] });
+  });
+
   it('returns the four levels in fixed order without a level', async () => {
     const result = await useCase.execute({});
     expect(result).toEqual({
