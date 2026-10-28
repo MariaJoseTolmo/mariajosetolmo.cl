@@ -1,4 +1,5 @@
 import request from 'supertest';
+import { contentViolations } from './support/content-rules';
 import { createTestApp, type TestApp } from './support/test-app';
 
 const JSON_TYPE = /application\/json/;
@@ -203,6 +204,23 @@ describe('content endpoints (e2e)', () => {
           ? 'limit must be an integer between 1 and 50'
           : 'cursor must be a non-negative integer',
       });
+    });
+  });
+
+  describe('forbidden content scan', () => {
+    it.each(['/api/v1/profile', '/api/v1/experience', '/api/v1/skills'])(
+      '%s body has no salary, phone, availability, email or CV file',
+      async (path) => {
+        const res = await get(path).expect(200);
+        expect(contentViolations(res.text)).toEqual([]);
+      },
+    );
+
+    it('keeps openToWork a boolean in the body', async () => {
+      const res = await get('/api/v1/profile').expect(200);
+      expect(typeof (res.body as { openToWork: unknown }).openToWork).toBe(
+        'boolean',
+      );
     });
   });
 

@@ -138,6 +138,11 @@ describe('money, phone and documents', () => {
       '$1.500',
       '1.500 CLP',
       '2 millones',
+      'sueldo 1500000 pesos',
+      'Sueldo líquido: 1500000',
+      'pretensión de renta 1.500.000',
+      'Remuneración deseada 900000',
+      'salario 1,500,000',
     ])('money: %j', (text) => {
       expect(moneyMatches(text)).not.toEqual([]);
     });
@@ -152,6 +157,11 @@ describe('money, phone and documents', () => {
       'v1.234.567',
       'next 16.2.100.200',
       'version 1.234.567 of the lib',
+      'sueldo',
+      'sueldo a convenir',
+      'renta 12',
+      'rentabilidad 1500000',
+      'timestamp 1792800000000',
     ])('money ignores %j', (text) => {
       expect(moneyMatches(text)).toEqual([]);
     });
@@ -162,8 +172,24 @@ describe('money, phone and documents', () => {
       '9 7453 6288 x',
       '9-7453-6288',
       '(9) 7453 6288',
+      '56912345678',
+      '+56912345678',
+      '912345678',
+      '(+56) 9 1234 5678',
+      'fono 56912345678.',
     ])('phone: %j', (text) => {
       expect(phoneMatches(text)).not.toEqual([]);
+    });
+
+    it.each([
+      '1792800000000',
+      'sha 9123456789',
+      'id 5691234567890',
+      'v9.12345678',
+      '2000-01-01T00:00:00.000Z',
+      '56 9',
+    ])('phone ignores %j', (text) => {
+      expect(phoneMatches(text)).toEqual([]);
     });
 
     it.each([

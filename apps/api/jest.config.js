@@ -1,6 +1,8 @@
 /** @type {import('jest').Config} */
 module.exports = {
   rootDir: 'src',
+  // test/support holds pure helpers (content rules) with their own specs.
+  roots: ['<rootDir>', '<rootDir>/../test/support'],
   testRegex: '.*\\.spec\\.ts$',
   moduleFileExtensions: ['js', 'json', 'ts'],
   transform: {

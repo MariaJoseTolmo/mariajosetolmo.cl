@@ -13,6 +13,9 @@ const MONEY: RegExp[] = [
   // version-like strings (1.234.567).
   /(\$|CLP)\s?\d{1,3}(\.\d{3})+(?![\d.])/,
   /(?<![\d.])\d{1,3}(\.\d{3})+\s?(CLP|pesos)\b/i,
+  // Salary keyword followed within a few words by a figure of 4+ digits, with
+  // or without separators. No bare long-number rule: ids and timestamps exist.
+  /\b(sueldo|salario|renta|pretensi\w*|remuneraci\w*)\b(\W+[^\W\d]\w*){0,3}[^\w]+\d[\d.,]{3,}/i,
 ];
 
 /** Phone numbers live in `src/content/site.ts` only. */
@@ -21,6 +24,10 @@ const PHONE: RegExp[] = [
   /\btel:/i,
   /\b9[ -]?\d{4}[ -]?\d{4}\b/,
   /\(9\)\s?\d{4}[ -]?\d{4}\b/,
+  // Chilean mobile written solid (56912345678, +56912345678, 912345678); the
+  // lookarounds keep longer ids, timestamps and versions out.
+  /(?<![\w.])(\+?56)?9\d{8}(?!\w|\.\d)/,
+  /\(\+?56\)\s?9/,
 ];
 
 const MONTHS =
