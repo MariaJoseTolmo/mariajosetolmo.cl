@@ -51,7 +51,7 @@ Un solo hilo de escritura. U1 y U2 podrían escribirse en paralelo solo si U2 fi
 
 ## Preguntas abiertas (NO decidir en apply; preguntar a la usuaria)
 
-- [ ] Q-A. NO VERIFICADO: `tsc -p tsconfig.json` de la API acepta los archivos de la web que arrastra el import relativo (tarea 7.1). Si falla, STOP y preguntar; no excluir el int-spec del `typecheck` (plan B: `require` + interfaces locales mínimas).
+- [x] Q-A. VERIFICADO en 7.1 (typecheck y ts-jest aceptan el import relativo): `tsc -p tsconfig.json` de la API acepta los archivos de la web que arrastra el import relativo (tarea 7.1). Si falla, STOP y preguntar; no excluir el int-spec del `typecheck` (plan B: `require` + interfaces locales mínimas).
 - [ ] Q-B. NO VERIFICADO: TypeORM/`pg` con el pooler de Neon en modo transacción (ADR-004). Mitigación: solo `SELECT` de una sentencia; se verifica en el cambio de infra, no aquí.
 - [ ] Q-C. Supuesto: `pg` devuelve `text[]` como `string[]` con el parser por defecto; lo cubre la tarea 6.1.
 
@@ -103,15 +103,15 @@ Un solo hilo de escritura. U1 y U2 podrían escribirse en paralelo solo si U2 fi
 
 ## U7 — Comparador y escaneo puros (PR3)
 
-- [ ] 7.1 **Verificación previa (STOP si falla y preguntar, ver Q-A).** Añadir un import mínimo `../../../web/src/content/{experience,stack}` en un archivo temporal de `test/` y correr `npm run typecheck -w apps/api` y `npm run test:int` (ts-jest). Si `tsc` rechaza archivos de la web: no excluir del `typecheck`; detener y consultar. Si pasa, el import queda en U8.
-- [ ] 7.2 RED `test/support/content-rules.spec.ts` (`findContentDrift(web, served)`: sin deriva -> `[]`; empresa ausente, id fuera de orden, nivel faltante, habilidad cambiada, `technologies` faltante tratado como `[]` -> mensajes no vacíos; entradas mutadas, sin base) -> GREEN `test/support/content-rules.ts` (`findContentDrift`).
-- [ ] 7.3 RED mismo `content-rules.spec.ts` (`contentViolations(text)`: positivos de sueldo/monto, teléfono, disponibilidad, email y archivo de CV (`.pdf|.doc|.docx|.odt`, sin distinguir mayúsculas); negativo: `Accenture Chile` no es violación; `openToWork` se exige `typeof boolean`) -> GREEN `contentViolations`, reutilizando `moneyMatches`, `phoneMatches`, `availabilityMatches` de `apps/web/src/test/contentRules.ts` por import relativo (E9) más las reglas nuevas. REFACTOR. CIERRE.
+- [x] 7.1 **Verificación previa (STOP si falla y preguntar, ver Q-A).** Añadir un import mínimo `../../../web/src/content/{experience,stack}` en un archivo temporal de `test/` y correr `npm run typecheck -w apps/api` y `npm run test:int` (ts-jest). Si `tsc` rechaza archivos de la web: no excluir del `typecheck`; detener y consultar. Si pasa, el import queda en U8.
+- [x] 7.2 RED `test/support/content-rules.spec.ts` (`findContentDrift(web, served)`: sin deriva -> `[]`; empresa ausente, id fuera de orden, nivel faltante, habilidad cambiada, `technologies` faltante tratado como `[]` -> mensajes no vacíos; entradas mutadas, sin base) -> GREEN `test/support/content-rules.ts` (`findContentDrift`).
+- [x] 7.3 RED mismo `content-rules.spec.ts` (`contentViolations(text)`: positivos de sueldo/monto, teléfono, disponibilidad, email y archivo de CV (`.pdf|.doc|.docx|.odt`, sin distinguir mayúsculas); negativo: `Accenture Chile` no es violación; `openToWork` se exige `typeof boolean`) -> GREEN `contentViolations`, reutilizando `moneyMatches`, `phoneMatches`, `availabilityMatches` de `apps/web/src/test/contentRules.ts` por import relativo (E9) más las reglas nuevas. REFACTOR. CIERRE.
 
 ## U8 — Contrato con Postgres y escaneo de cuerpos (PR3)
 
-- [ ] 8.1 RED `test/integration/content-contract.int-spec.ts` (migrar con Postgres real; leer lo servido por `TypeOrmContentRepository`; `findContentDrift` contra `experience.ts` y `stack.ts` de la web -> `[]`; mismos ids y empresas, cuatro niveles con los mismos ítems en orden) -> GREEN (debe pasar con el seed de U5; si no, corregir el seed, no el test). Verificar a mano que mutar una empresa en el seed pone el test en rojo y revertir la mutación.
-- [ ] 8.2 RED escaneo en el mismo int-spec: `contentViolations` sobre todo el texto servido (profile, experience, skills) y sobre el texto fuente de `1792800000000-content.ts`; sin coincidencias; `typeof openToWork === 'boolean'` -> GREEN. Verificar una mutación local (teléfono en el seed) en rojo y revertir.
-- [ ] 8.3 RED en `test/content.e2e-spec.ts`: aplicar `contentViolations` a los cuerpos de las tres rutas con el fixture -> GREEN. REFACTOR. CIERRE (con `test:int`; el job CI `integration` ya existe).
+- [x] 8.1 RED `test/integration/content-contract.int-spec.ts` (migrar con Postgres real; leer lo servido por `TypeOrmContentRepository`; `findContentDrift` contra `experience.ts` y `stack.ts` de la web -> `[]`; mismos ids y empresas, cuatro niveles con los mismos ítems en orden) -> GREEN (debe pasar con el seed de U5; si no, corregir el seed, no el test). Verificar a mano que mutar una empresa en el seed pone el test en rojo y revertir la mutación.
+- [x] 8.2 RED escaneo en el mismo int-spec: `contentViolations` sobre todo el texto servido (profile, experience, skills) y sobre el texto fuente de `1792800000000-content.ts`; sin coincidencias; `typeof openToWork === 'boolean'` -> GREEN. Verificar una mutación local (teléfono en el seed) en rojo y revertir.
+- [x] 8.3 RED en `test/content.e2e-spec.ts`: aplicar `contentViolations` a los cuerpos de las tres rutas con el fixture -> GREEN. REFACTOR. CIERRE (con `test:int`; el job CI `integration` ya existe).
 
 ## Trazabilidad escenario -> tarea
 
@@ -129,3 +129,5 @@ Un solo hilo de escritura. U1 y U2 podrían escribirse en paralelo solo si U2 fi
 | | Migración SQL plano, `down` elimina las tres tablas | 5.1 |
 | api-recruiter-endpoints | Rutas de contenido con sesión · sin sesión | 3.2, 3.4, 4.1, 4.4 |
 | | Ruta inexistente (`/api/v1/unknown` -> 404 JSON) | 3.4 |
+
+> Nota PR3 (fixes de revisión): este PR también modifica las reglas del content-guard de la web (`apps/web/src/test/contentRules.ts` y `content-guard.test.ts`): teléfono móvil chileno suelto y dinero con palabra clave de sueldo. verify/archive deben reflejarlo; no se encontró spec de content-guard con listas exactas de reglas en `openspec/specs`.

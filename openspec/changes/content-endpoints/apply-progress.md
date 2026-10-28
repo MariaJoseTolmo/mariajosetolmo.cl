@@ -1,7 +1,7 @@
 # Apply progress: content-endpoints
 
 Modo: Strict TDD. Entrega: opción (a), 3 PRs con `size:exception`, `stacked-to-main`.
-Lotes: PR1 = U1–U4 (tareas 1.1–4.4 completas); PR2 = U5–U6 (tareas 5.1–6.3 completas). Pendiente: U7–U8 (PR3).
+Lotes: PR1 = U1–U4 (tareas 1.1–4.4 completas); PR2 = U5–U6 (tareas 5.1–6.3 completas). PR3 = U7–U8 (tareas 7.1–8.3 completas).
 
 ## Evidencia TDD
 
@@ -76,3 +76,48 @@ Solo tests; sin cambios en código de producción.
 | Aserciones de recuperación | `test/postgres-down.e2e-spec.ts` | `describe.each` con tabla y marcador por ruta: `/FROM profile\b/`+`Db Name`, `/FROM experience\b/`+`Db Company`, `/FROM skill\b/`+`Db Skill` | Apuntar experience a `/FROM skill\b/`: 1 de 12 en rojo | 12/12 |
 
 Resultados: unit 543, e2e 160, integración 96 (todos en verde); eslint (max-warnings 0), typecheck y prettier verdes. Archivos temporales (migración vacía, backups) eliminados.
+
+## Lote PR3 (U7–U8)
+
+Rama `test/content-endpoints-contract`. `size:exception`, `stacked-to-main`. Integración contra los servicios docker-compose ya levantados.
+
+**7.1 (Q-A resuelta):** un archivo temporal de `test/integration` importó `experience`, `stack` y `contentRules` de la web; `npm run typecheck -w apps/api` pasó y ts-jest lo ejecutó. No hizo falta el plan B (`require` + interfaces locales). Archivo temporal eliminado.
+
+| Tarea | Archivo de test | Capa | RED | GREEN | Triangulación | REFACTOR |
+|-------|-----------------|------|-----|-------|---------------|----------|
+| 7.2, 7.3 | `test/support/content-rules.spec.ts` | Unit | Stub que devuelve `[]`: 18 de 24 en rojo (aserciones en runtime) | 24/24 con `content-rules.ts` | Deriva: empresa ausente, ids fuera de orden, empresa cambiada, highlights, technologies, nivel faltante, habilidad cambiada, orden dentro del nivel, columna desconocida. Escaneo: sueldo, CLP, teléfono, disponibilidad, email, pdf/doc/docx/odt (mayúsculas); negativos: `Accenture Chile`, `Banco Itaú`, `openToWork` | Tipos con listas `readonly`; fixtures mutables en el spec |
+| 8.1 | `test/integration/content-contract.int-spec.ts` | Integración | Mutación local del seed: `Amecs` -> `Amecz` (2 de 7 en rojo); `Python` -> `Pythons` (2 de 7 en rojo) | 7/7 con el seed de U5 | Mismos ids, empresas, cuatro niveles en orden con los mismos ítems | Limpio |
+| 8.2 | mismo int-spec | Integración | Mutación local: teléfono en el seed (1 de 7 en rojo); email en el seed (1 de 7 en rojo) | 7/7 | Datos servidos, fuente de la migración (sin placeholders `$n`), `openToWork` boolean, empleadores permitidos | Limpio |
+| 8.3 | `test/content.e2e-spec.ts` | e2e | Mutación local del fixture (email, teléfono y `cv.pdf` inyectados en habilidades y experiencia): 2 de 37 en rojo | 37/37 | Las tres rutas + `openToWork` boolean | Limpio |
+
+Todas las mutaciones se revirtieron (verificado con `git status`: solo cambios de PR3).
+
+### Resultados PR3
+
+- Unit: 57 suites, 567 tests. e2e: 11 suites, 164 tests. Integración: 9 suites, 103 tests.
+- `eslint apps/api --max-warnings 0`, `typecheck`, `prettier --check apps/api`, `build`, `lint:boundaries`: verdes.
+
+### Desviaciones PR3
+
+- `jest.config.js` (unit) añade `roots` con `test/support` para que `content-rules.spec.ts` (ubicación fijada por el task 7.2) se ejecute con `npm test`; sin esto ningún runner lo recogía. El CI `unit` lo ejecuta; el job `integration` corre `content-contract.int-spec.ts` (`testRegex` `\.int-spec\.ts$`, `rootDir` `test`).
+- El escaneo de la fuente de la migración reemplaza los placeholders SQL `$1`, `$2`... por `?` antes de aplicar las reglas: la regla de dinero de la web (`/\$\s?\d/`) los marcaba como falso positivo.
+- Las rutas de `apps/web` solo se importan; no se modificó ningún archivo de la web.
+
+## Fixes de revisión PR3
+
+Tres ajustes aprobados tras la revisión. Modo TDD estricto.
+
+| Fix | Archivo(s) | RED | GREEN | Notas |
+|-----|-----------|-----|-------|-------|
+| A (WARNING) | `test/support/content-rules.ts` (`stripSqlPlaceholders`), `content-rules.spec.ts`, `content-contract.int-spec.ts` | Stub identidad: casos de placeholders en rojo (runtime) | 40/40 en el spec | Solo se reemplaza `$1`..`$99` sin dígitos ni grupo de miles a continuación (`/\$[1-9]\d?(?!\d\|\.\d)/`). `$1000`, `$1.000.000`, `$ 1.000.000`, `$1.500` siguen detectados; `$1`, `$12`, `($1,$2,$3)`, `$9;` no. El int-spec usa el helper. |
+| B (SUGGESTION) | `content-contract.int-spec.ts` | No hubo RED en runtime: el test nuevo pasa de inmediato con el seed actual (la rama completa ya sirve los mismos datos); su protección es contra un seed vacío. Se verificó que `experience.items.length > 0` y cada columna `> 0` | Verde | Conteo servido de experiencia igual al de la web; conteo de habilidades por nivel igual al de cada columna del stack. |
+| C (SUGGESTION) | `apps/web/src/test/contentRules.ts`, `content-guard.test.ts`, `content-rules.spec.ts` | Casos nuevos añadidos antes de la regla: 8 en rojo en la web, 7 en el spec de la API | 1196/1196 web, 40/40 spec | Teléfono: `(?<![\w.])(\+?56)?9\d{8}(?!\w\|\.\d)` y `\(\+?56\)\s?9`. Dinero: palabra clave (sueldo, salario, renta, pretensi*, remuneraci*) seguida a ≤3 palabras de una cifra de 4+ dígitos, con o sin separadores. Sin regla de número largo suelto. |
+
+**Falsos positivos:** el content-guard recorre todo `app` y `src` de `apps/web` (1196 tests, incluye cada archivo) y los escaneos de la API (fuente de la migración, datos servidos, e2e): cero hallazgos nuevos. `src/content/site.ts` sigue excluido de la regla de teléfono por nombre de archivo en `content-guard.test.ts`; ningún test contiene el teléfono real (se usan `56912345678`, etc.). Un caso de prueba (`1.912345678`) se descartó porque la regla preexistente `\b9[ -]?\d{4}[ -]?\d{4}\b` ya lo marca (conservador, sin cambio).
+
+**Cross-app:** este PR modifica las reglas del content-guard de la web. `openspec/specs` no tiene ninguna spec de content-guard con listas exactas de reglas (grep sin resultados); `web-public-pages` y `web-delivery-contract` solo describen el comportamiento a alto nivel, por lo que no se estima necesario un delta de spec. verify/archive deben igualmente mencionarlo.
+
+### Resultados tras los fixes
+
+- API unit: 57 suites, 583 tests. e2e: 11 suites, 164. Integración: 9 suites, 104. Web: 1196 tests.
+- eslint (`apps/api apps/web`, max-warnings 0), typecheck API y web, prettier, build API: verdes.
