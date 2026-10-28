@@ -89,7 +89,10 @@ describe('findContentDrift', () => {
   it('reports a missing company', () => {
     const s = served();
     s.experience.pop();
-    expect(findContentDrift(web(), s)).not.toEqual([]);
+    expect(findContentDrift(web(), s)).toEqual([
+      'experience ids differ (web: alpha,beta; served: alpha)',
+      'experience "beta" is not served',
+    ]);
   });
 
   it('reports ids out of order', () => {
@@ -109,13 +112,17 @@ describe('findContentDrift', () => {
   it('reports a changed field of an entry (highlights)', () => {
     const s = served();
     s.experience[1]!.highlights = ['Shipped services.'];
-    expect(findContentDrift(web(), s)).not.toEqual([]);
+    expect(findContentDrift(web(), s)).toEqual([
+      'experience "beta" highlights differ',
+    ]);
   });
 
   it('reports technologies served where the web has none', () => {
     const s = served();
     s.experience[1]!.technologies = ['Extra'];
-    expect(findContentDrift(web(), s)).not.toEqual([]);
+    expect(findContentDrift(web(), s)).toEqual([
+      'experience "beta" technologies differ',
+    ]);
   });
 
   it('reports a missing skill level', () => {
@@ -133,7 +140,9 @@ describe('findContentDrift', () => {
   it('reports skills out of order within a level', () => {
     const s = served();
     s.skills[0] = { level: 'advanced', skills: ['PostgreSQL', 'JavaScript'] };
-    expect(findContentDrift(web(), s)).not.toEqual([]);
+    expect(findContentDrift(web(), s)).toEqual([
+      'skill level "advanced" items differ or are out of order',
+    ]);
   });
 
   it('reports an unknown web stack column', () => {
@@ -145,22 +154,24 @@ describe('findContentDrift', () => {
 
 describe('contentViolations', () => {
   it.each([
-    ['salary', 'Pretensión de renta: $2.500.000'],
-    ['currency code', 'Sueldo 3000000 CLP'],
-    ['phone', 'Llámame al +56 9 1234 5678'],
-    ['availability', 'Disponible desde el 1 de marzo'],
-    ['email', 'Escribe a someone@example.test'],
-    ['CV pdf', 'Descarga cv-maria.pdf'],
-    ['CV docx upper case', 'CV.DOCX'],
-    ['CV odt', 'resume.odt'],
-    ['CV doc', 'resume.doc'],
-    ['bare mobile', 'fono 56912345678'],
-    ['plus mobile', 'fono +56912345678'],
-    ['parenthesised prefix', 'fono (+56) 9 1234 5678'],
-    ['salary without separators', 'sueldo 1500000 pesos'],
-    ['salary with keyword', 'Pretensión de renta 1.500.000'],
-  ])('flags %s', (_name, text) => {
-    expect(contentViolations(text)).not.toEqual([]);
+    ['salary', 'Pretensión de renta: $2.500.000', 'sueldo|salario'],
+    ['currency code', 'Sueldo 3000000 CLP', 'CLP'],
+    ['phone', 'Llámame al +56 9 1234 5678', '\\+56'],
+    ['availability', 'Disponible desde el 1 de marzo', 'disponib'],
+    ['email', 'Escribe a someone@example.test', '@'],
+    ['CV pdf', 'Descarga cv-maria.pdf', 'pdf|docx?|odt'],
+    ['CV docx upper case', 'CV.DOCX', 'pdf|docx?|odt'],
+    ['CV odt', 'resume.odt', 'pdf|docx?|odt'],
+    ['CV doc', 'resume.doc', 'pdf|docx?|odt'],
+    ['bare mobile', 'fono 56912345678', '9\\d{8}'],
+    ['plus mobile', 'fono +56912345678', '9\\d{8}'],
+    ['parenthesised prefix', 'fono (+56) 9 1234 5678', '\\(\\+?56\\)'],
+    ['salary without separators', 'sueldo 1500000 pesos', 'sueldo|salario'],
+    ['salary with keyword', 'Pretensión de renta 1.500.000', 'sueldo|salario'],
+  ])('flags %s', (_name, text, rule) => {
+    const violations = contentViolations(text);
+    expect(violations).not.toEqual([]);
+    expect(violations.some((violation) => violation.includes(rule))).toBe(true);
   });
 
   it.each([
@@ -183,7 +194,7 @@ describe('stripSqlPlaceholders', () => {
     (amount) => {
       expect(
         contentViolations(stripSqlPlaceholders(`x ${amount} y`)),
-      ).not.toEqual([]);
+      ).toContain(String(/\$\s?\d/));
     },
   );
 

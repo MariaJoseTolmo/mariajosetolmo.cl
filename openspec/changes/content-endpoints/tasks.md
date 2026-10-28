@@ -57,9 +57,9 @@ Un solo hilo de escritura. U1 y U2 podrían escribirse en paralelo solo si U2 fi
 
 ## Cierre estándar de PR («CIERRE»)
 
-- [ ] C1. (PR1 medido: ~1.100 líneas, `size:exception` aprobado.) Contar líneas (`additions + deletions`, sin lockfile); si excede 400 y no hay `size:exception` aprobado, STOP.
-- [ ] C2. `npm run lint && npm run lint:boundaries && npm run format:check && npm run typecheck && npm run test:cov && npm run test:e2e && npm run build` en verde; desde U5 también `npm run test:int -w apps/api`.
-- [ ] C3. Cobertura `domain`/`application` >= 80 %; gitleaks sin hallazgos; revisión de contexto fresco.
+- [x] C1. (PR1 medido: ~1.100 líneas, `size:exception` aprobado.) Contar líneas (`additions + deletions`, sin lockfile); si excede 400 y no hay `size:exception` aprobado, STOP. Evidencia: verify-report confirma el `size:exception` registrado.
+- [x] C2. `npm run lint && npm run lint:boundaries && npm run format:check && npm run typecheck && npm run test:cov && npm run test:e2e && npm run build` en verde; desde U5 también `npm run test:int -w apps/api`. Evidencia: verify-report (todos los comandos en verde).
+- [x] C3. Cobertura `domain`/`application` >= 80 %; gitleaks sin hallazgos; revisión de contexto fresco. Evidencia: verify-report (cobertura 100 %, gitleaks limpio; el propio verify es la revisión de contexto fresco).
 
 ## U1 — Dominio y puerto (PR1)
 
