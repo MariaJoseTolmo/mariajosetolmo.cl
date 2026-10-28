@@ -81,9 +81,9 @@ PR 1 y 2 superan las 400 líneas: decidir en `sdd-tasks` (`size:exception` o má
 
 ## Criterios de éxito
 
-- [ ] `npm run lint && npm run typecheck && npm test && npm run test:e2e && npm run build` en verde.
-- [ ] e2e: con sesión, las tres rutas responden 200 con la forma de C2/C3; sin sesión, 401.
-- [ ] e2e: `limit`/`cursor`/`level` inválidos → 400 sin repetir la entrada; `next` es `null` en la última página.
-- [ ] Postgres caído → 503; las tres rutas aparecen en `/api/docs` y `/admin` no.
-- [ ] El test de contrato y el escaneo de contenido pasan en CI.
-- [ ] Cobertura de `domain`/`application` ≥ 80 %; sin datos personales en el seed.
+- [x] `npm run lint && npm run typecheck && npm test && npm run test:e2e && npm run build` en verde. *Cumplido (verify-report, Ejecución): `npm run test:cov -w apps/api` 583/583, `test:e2e` 164/164, typecheck, build y eslint en verde. Nota: `apps/api` no tiene script `lint`; se usó `npx eslint apps/api apps/web --max-warnings 0`.*
+- [x] e2e: con sesión, las tres rutas responden 200 con la forma de C2/C3; sin sesión, 401. *Cumplido: `content.e2e-spec.ts` (verify-report, matriz de cumplimiento).*
+- [x] e2e: `limit`/`cursor`/`level` inválidos → 400 sin repetir la entrada; `next` es `null` en la última página. *Cumplido: `content.e2e-spec.ts` (it.each de 400 sin eco y recorrido de `next`).*
+- [x] Postgres caído → 503; las tres rutas aparecen en `/api/docs` y `/admin` no. *Cumplido: `postgres-down.e2e-spec.ts` y `content.e2e-spec.ts` (Swagger).*
+- [x] El test de contrato y el escaneo de contenido pasan en CI. *Evidencia: el job `integration` pasó en verde en los PR #43 y #44.*
+- [x] Cobertura de `domain`/`application` ≥ 80 %; sin datos personales en el seed. *Cumplido: cobertura 100 % en `content/domain` y `content/application`; escaneo del seed sin teléfono, email, sueldo, disponibilidad ni archivos de CV; gitleaks sin hallazgos.*

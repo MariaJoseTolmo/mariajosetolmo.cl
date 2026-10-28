@@ -2,9 +2,9 @@
 
 ## Purpose
 
-Capacidad nueva. Define en `apps/api` los endpoints de la zona reclutador que el cliente `web-recruiter-access` consume: `GET /api/v1/me`, `GET /api/v1/cv`, el stub de `/api/v1/admin/visits`, el 404 de los endpoints de contenido y la exclusión de `/admin` en Swagger. Decisión D3 de la propuesta es vinculante.
+Capacidad nueva. Define en `apps/api` los endpoints de la zona reclutador que el cliente `web-recruiter-access` consume: `GET /api/v1/me`, `GET /api/v1/cv`, el stub de `/api/v1/admin/visits`, el requisito de sesión de los endpoints de contenido (su contrato está en `api-content-endpoints`) y la exclusión de `/admin` en Swagger. La decisión D3 de `auth-backend`, que dejaba los endpoints de contenido en 404, queda reemplazada por el change `content-endpoints`.
 
-Origen: change `auth-backend` (archivado el 2026-10-22, ver `openspec/changes/archive/2026-10-22-auth-backend/archive-report.md`).
+Origen: change `auth-backend` (archivado el 2026-10-22, ver `openspec/changes/archive/2026-10-22-auth-backend/archive-report.md`). Modificada por el change `content-endpoints` (archivado el 2026-10-28, ver `openspec/changes/archive/2026-10-28-content-endpoints/archive-report.md`).
 
 ## Requirements
 
@@ -87,15 +87,27 @@ Origen: change `auth-backend` (archivado el 2026-10-22, ver `openspec/changes/ar
 - WHEN se envía `GET /api/v1/admin/visits`
 - THEN la respuesta es `401`
 
-### Requirement: Endpoints de contenido fuera de alcance
+### Requirement: Endpoints de contenido con sesión
 
-`GET /api/v1/profile`, `GET /api/v1/experience` y `GET /api/v1/skills` MUST responder `404` con cuerpo JSON, también con sesión válida. MUST NOT exponer datos ni estar documentados en Swagger.
+`GET /api/v1/profile`, `GET /api/v1/experience` y `GET /api/v1/skills` MUST requerir sesión válida. Sin sesión MUST responder `401` JSON. Su contrato de respuesta se define en la capacidad `api-content-endpoints`. Estas tres rutas MUST estar documentadas en Swagger (tag `content`). Cualquier otra ruta inexistente bajo `/api/v1` MUST seguir respondiendo `404` con cuerpo JSON.
 
-#### Scenario: 404 con sesión
+#### Scenario: Rutas de contenido con sesión
 
 - GIVEN una sesión válida
 - WHEN se piden `/api/v1/profile`, `/api/v1/experience?limit=2` y `/api/v1/skills?level=advanced`
-- THEN las tres responden `404` con cuerpo JSON
+- THEN las tres responden `200` con cuerpo JSON
+
+#### Scenario: Rutas de contenido sin sesión
+
+- GIVEN una petición sin cookies
+- WHEN se pide cualquiera de las tres rutas
+- THEN la respuesta es `401` con cuerpo JSON
+
+#### Scenario: Ruta inexistente
+
+- GIVEN una sesión válida
+- WHEN se pide `/api/v1/unknown`
+- THEN la respuesta es `404` con cuerpo JSON
 
 ### Requirement: Swagger sin rutas de administración
 
@@ -115,7 +127,7 @@ La documentación en `/api/docs` MUST NOT incluir ninguna ruta bajo `/api/v1/adm
 
 ### Requirement: Errores JSON consistentes
 
-Toda respuesta de error de los endpoints de esta capacidad (`401`, `403`, `404`) MUST ser JSON y MUST NOT filtrar trazas, rutas internas, SQL ni detalles de claves.
+Toda respuesta de error de los endpoints de esta capacidad (`401`, `403`, `404`) MUST ser JSON y MUST NOT filtrar trazas, rutas internas, SQL ni detalles de claves. Las rutas de contenido siguen la misma regla con sus propios códigos (`400`, `401`, `503`) según `api-content-endpoints`.
 
 #### Scenario: Error sin filtraciones
 
