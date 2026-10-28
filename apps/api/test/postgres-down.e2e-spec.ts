@@ -13,6 +13,13 @@ class FlakyDataSource {
     start_label: 'db start',
     salary: 'db salary',
   };
+  profileRow: Record<string, unknown> | null = {
+    name: 'Db Name',
+    role: 'Db Role',
+    architecture: 'db architecture',
+    domains: ['db-domain'],
+    open_to_work: true,
+  };
   readonly statements: { sql: string; params: unknown[] }[] = [];
 
   initialize(): Promise<this> {
@@ -29,6 +36,26 @@ class FlakyDataSource {
       return Promise.resolve(
         this.availabilityRow ? [this.availabilityRow] : [],
       );
+    }
+    if (sql.includes('FROM profile')) {
+      return Promise.resolve(this.profileRow ? [this.profileRow] : []);
+    }
+    if (sql.includes('FROM experience')) {
+      return Promise.resolve([
+        {
+          id: 'db-entry',
+          position: 1,
+          company: 'Db Company',
+          role: 'Db Role',
+          sector: 'Db Sector',
+          period_label: 'Db Period',
+          highlights: ['db highlight'],
+          technologies: [],
+        },
+      ]);
+    }
+    if (sql.includes('FROM skill')) {
+      return Promise.resolve([{ level: 'advanced', name: 'Db Skill' }]);
     }
     if (!sql.includes('INSERT INTO users') && !sql.includes('FROM users')) {
       return Promise.resolve([]);
@@ -161,6 +188,50 @@ describe('Postgres unreachable at boot', () => {
         error: 'Service Unavailable',
         message: 'Service temporarily unavailable',
       });
+    });
+  });
+
+  describe.each([
+    ['/api/v1/profile', /FROM profile\b/, 'Db Name'],
+    ['/api/v1/experience', /FROM experience\b/, 'Db Company'],
+    ['/api/v1/skills', /FROM skill\b/, 'Db Skill'],
+  ] as const)('content route %s', (path, table, marker) => {
+    it('answers 503 with a generic no-store body while Postgres is down', async () => {
+      const cookie = await t.login();
+      const res = await request(t.server()).get(path).set('Cookie', cookie);
+      expect(res.status).toBe(503);
+      expect(res.headers['cache-control']).toBe('no-store');
+      expect(res.body).toEqual({
+        statusCode: 503,
+        error: 'Service Unavailable',
+        message: 'Service temporarily unavailable',
+      });
+      const raw = JSON.stringify(res.body);
+      expect(raw).not.toMatch(/10\.0\.0\.9|ECONNREFUSED|SELECT|stack/);
+    });
+
+    it('serves from the database after recovery', async () => {
+      db.up = true;
+      const cookie = await t.login();
+      const res = await request(t.server()).get(path).set('Cookie', cookie);
+      expect(res.status).toBe(200);
+      expect(JSON.stringify(res.body)).toContain(marker);
+      expect(db.statements.some((s) => table.test(s.sql))).toBe(true);
+    });
+  });
+
+  it('answers profile 503 when the profile row is missing', async () => {
+    db.up = true;
+    db.profileRow = null;
+    const cookie = await t.login();
+    const res = await request(t.server())
+      .get('/api/v1/profile')
+      .set('Cookie', cookie);
+    expect(res.status).toBe(503);
+    expect(res.body).toEqual({
+      statusCode: 503,
+      error: 'Service Unavailable',
+      message: 'Service temporarily unavailable',
     });
   });
 });

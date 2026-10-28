@@ -3,6 +3,18 @@ import {
   type IsolatedDatabase,
 } from './support/postgres';
 
+const ALL_TABLES = [
+  'availability',
+  'experience',
+  'profile',
+  'refresh_tokens',
+  'skill',
+  'users',
+];
+
+/** Items in apps/web/src/content/stack.ts: 4 + 5 + 4 + 3. */
+const WEB_SKILL_COUNT = 16;
+
 describe('migrations (real Postgres)', () => {
   let db: IsolatedDatabase;
 
@@ -22,9 +34,11 @@ describe('migrations (real Postgres)', () => {
 
   it('goes up, down and up again', async () => {
     await db.dataSource.runMigrations();
-    expect(await tables()).toEqual(['availability', 'refresh_tokens', 'users']);
+    expect(await tables()).toEqual(ALL_TABLES);
 
     // Each `down` undoes only its own migration, newest first.
+    await db.dataSource.undoLastMigration();
+    expect(await tables()).toEqual(['availability', 'refresh_tokens', 'users']);
     await db.dataSource.undoLastMigration();
     expect(await tables()).toEqual(['refresh_tokens', 'users']);
     await db.dataSource.undoLastMigration();
@@ -33,7 +47,7 @@ describe('migrations (real Postgres)', () => {
     expect(await tables()).toEqual([]);
 
     await db.dataSource.runMigrations();
-    expect(await tables()).toEqual(['availability', 'refresh_tokens', 'users']);
+    expect(await tables()).toEqual(ALL_TABLES);
   });
 
   it('is idempotent: running again applies nothing new', async () => {
@@ -209,6 +223,132 @@ describe('migrations (real Postgres)', () => {
           'token_hash',
           'used_at',
           'expires_at',
+        ]),
+      );
+    });
+  });
+
+  describe('content (profile, experience, skill)', () => {
+    beforeAll(async () => {
+      await db.dataSource.runMigrations();
+    });
+
+    const refused = (sql: string, params: unknown[] = []): Promise<unknown> =>
+      expect(db.query(sql, params)).rejects.toThrow(/check|unique|duplicate/i);
+
+    it('drops and recreates the three tables with up -> down -> up', async () => {
+      await db.dataSource.undoLastMigration();
+      expect(await tables()).toEqual([
+        'availability',
+        'refresh_tokens',
+        'users',
+      ]);
+      await db.dataSource.runMigrations();
+      expect(await tables()).toEqual(ALL_TABLES);
+    });
+
+    it('seeds one profile with a boolean openToWork and the public fields', async () => {
+      const rows = await db.query(
+        'SELECT id, name, role, architecture, domains, open_to_work FROM profile',
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.['id']).toBe(1);
+      expect(typeof rows[0]?.['open_to_work']).toBe('boolean');
+      expect(rows[0]?.['domains']).toEqual(['banca', 'minería']);
+    });
+
+    it('seeds the five experience entries in site order', async () => {
+      const rows = await db.query(
+        'SELECT id, position FROM experience ORDER BY position',
+      );
+      expect(rows.map((r) => r['id'])).toEqual([
+        'kabeli',
+        'amecs',
+        'accenture',
+        'independiente',
+        'consultoria',
+      ]);
+      expect(rows.map((r) => Number(r['position']))).toEqual([1, 2, 3, 4, 5]);
+    });
+
+    it('seeds every skill of the web stack across the four levels', async () => {
+      const [total] = await db.query('SELECT count(*)::int AS n FROM skill');
+      expect(total?.['n']).toBe(WEB_SKILL_COUNT);
+      const levels = await db.query(
+        'SELECT DISTINCT level FROM skill ORDER BY 1',
+      );
+      expect(levels.map((r) => r['level'])).toEqual([
+        'advanced',
+        'architecture',
+        'learning',
+        'production',
+      ]);
+    });
+
+    it('keeps profile single: a second id is refused', async () => {
+      await refused(
+        `INSERT INTO profile (id, name, role, architecture, domains, open_to_work)
+         VALUES (2, 'x', 'y', 'z', '{}', false)`,
+      );
+    });
+
+    it('refuses a skill level outside the four known ones', async () => {
+      await refused(
+        `INSERT INTO skill (level, position, name) VALUES ('expert', 99, 'x')`,
+      );
+    });
+
+    it('refuses a non-positive position in experience and skill', async () => {
+      await refused(
+        `INSERT INTO experience (id, position, company, sector, role, period_label, highlights)
+         VALUES ('zero', 0, 'c', 's', 'r', 'p', '{}')`,
+      );
+      await refused(
+        `INSERT INTO skill (level, position, name) VALUES ('advanced', 0, 'zero')`,
+      );
+    });
+
+    it('refuses a duplicate experience position and a duplicate skill per level', async () => {
+      await refused(
+        `INSERT INTO experience (id, position, company, sector, role, period_label, highlights)
+         VALUES ('dup-pos', 1, 'c', 's', 'r', 'p', '{}')`,
+      );
+      await refused(
+        `INSERT INTO skill (level, position, name)
+         SELECT level, 99, name FROM skill WHERE level = 'advanced' LIMIT 1`,
+      );
+    });
+
+    it('defaults technologies to an empty array', async () => {
+      const [row] = await db.query(
+        `SELECT technologies FROM experience WHERE id = 'independiente'`,
+      );
+      expect(row?.['technologies']).toEqual([]);
+    });
+
+    it('documents the non-obvious columns', async () => {
+      const rows = await db.query(
+        `SELECT c.relname AS tbl, a.attname AS column_name
+         FROM pg_description d
+         JOIN pg_class c ON c.oid = d.objoid
+         JOIN pg_namespace n ON n.oid = c.relnamespace
+         LEFT JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = d.objsubid AND d.objsubid > 0
+         WHERE c.relname IN ('profile', 'experience', 'skill') AND n.nspname = $1`,
+        [db.schema],
+      );
+      const documented = rows.map(
+        (r) =>
+          `${String(r['tbl'])}.${typeof r['column_name'] === 'string' ? r['column_name'] : '(table)'}`,
+      );
+      expect(documented).toEqual(
+        expect.arrayContaining([
+          'profile.(table)',
+          'experience.(table)',
+          'skill.(table)',
+          'experience.period_label',
+          'experience.position',
+          'skill.position',
+          'profile.open_to_work',
         ]),
       );
     });
