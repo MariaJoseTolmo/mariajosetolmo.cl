@@ -31,12 +31,15 @@ import {
 } from '../../src/auth/application/ports/access-token.port';
 import { cookieNamesFor } from '../../src/auth/infrastructure/http/cookie-names';
 import { AVAILABILITY_REPOSITORY } from '../../src/availability/application/ports/availability-repository.port';
+import { CONTENT_REPOSITORY } from '../../src/content/application/ports/content-repository.port';
 import { Email } from '../../src/identity/domain/email';
 import type { Role } from '../../src/identity/domain/role';
 import { USER_REPOSITORY } from '../../src/identity/application/ports/user-repository.port';
 import { FakeClock } from './fakes/fake-clock';
+import { CONTENT_FIXTURE } from './fakes/content-fixture';
 import {
   InMemoryAvailabilityRepository,
+  InMemoryContentRepository,
   InMemoryUserRepository,
 } from './fakes/in-memory-repositories';
 import { testKeyPair } from './keys';
@@ -58,6 +61,8 @@ export interface TestApp {
   readonly secrets: Secrets;
   readonly users: InMemoryUserRepository;
   readonly availability: InMemoryAvailabilityRepository;
+  /** Seeded with `CONTENT_FIXTURE`; replaced by the real one with `dataSource`. */
+  readonly content: InMemoryContentRepository;
   readonly refresh: InMemoryRefreshTokenRepository;
   readonly mail: CapturingMailSender;
   readonly logger: CapturingLogger;
@@ -132,10 +137,13 @@ export async function createTestApp(
     .overrideProvider(LOGGER)
     .useValue(logger);
   const availability = new InMemoryAvailabilityRepository();
+  const content = new InMemoryContentRepository(CONTENT_FIXTURE);
   if (!options.dataSource) {
     builder = builder
       .overrideProvider(AVAILABILITY_REPOSITORY)
       .useValue(availability)
+      .overrideProvider(CONTENT_REPOSITORY)
+      .useValue(content)
       .overrideProvider(USER_REPOSITORY)
       .useValue(users)
       .overrideProvider(REFRESH_TOKEN_REPOSITORY)
@@ -162,6 +170,7 @@ export async function createTestApp(
     logger,
     store,
     availability,
+    content,
     async login(user: TestUser = {}) {
       const id = user.id ?? 'user-1';
       const role = user.role ?? 'RECRUITER';
