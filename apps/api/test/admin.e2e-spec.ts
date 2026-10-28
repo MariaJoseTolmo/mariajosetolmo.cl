@@ -59,21 +59,6 @@ describe('admin and error surface (e2e)', () => {
     });
   });
 
-  describe('content endpoints are out of scope (D3)', () => {
-    it.each([
-      '/api/v1/profile',
-      '/api/v1/experience?limit=2',
-      '/api/v1/skills?level=advanced',
-    ])('%s answers 404 JSON even with a valid session', async (path) => {
-      const cookie = await t.login();
-      const res = await request(t.server())
-        .get(path)
-        .set('Cookie', cookie)
-        .expect(404);
-      expect(res.headers['content-type']).toMatch(JSON_TYPE);
-    });
-  });
-
   describe('Swagger', () => {
     it('does not document any /api/v1/admin path', async () => {
       const res = await request(t.server()).get('/api/docs-json').expect(200);
@@ -103,7 +88,7 @@ describe('admin and error surface (e2e)', () => {
           .get('/api/v1/admin/visits')
           .set('Cookie', recruiter),
         await request(t.server())
-          .get('/api/v1/profile')
+          .get('/api/v1/unknown')
           .set('Cookie', recruiter),
         await request(t.server())
           .post('/api/v1/probe')
