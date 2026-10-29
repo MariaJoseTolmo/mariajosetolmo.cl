@@ -9,7 +9,10 @@ import {
 import userEvent from '@testing-library/user-event';
 import { axe } from '@/test/axe';
 import type { ApiGateway } from '@/lib/api/port';
-import type { ApiResult } from '@/lib/api/types';
+import type { ApiFailure, ApiResult, MagicLinkRequest } from '@/lib/api/types';
+import { apiErrorMessage } from '@/lib/apiErrorMessage';
+import { login } from '@/content/login';
+import { loginOverrides } from './loginOverrides';
 import { LoginContainer } from './LoginContainer';
 
 const ORIGINAL_MODE = process.env.NEXT_PUBLIC_API_MODE;
@@ -36,7 +39,12 @@ function fakeGateway(
 const respondWith = (result: ApiResult<void>) =>
   jest.fn(() => Promise.resolve(result));
 
-function setup(requestMagicLink = respondWith({ ok: true, data: undefined })) {
+function setup(
+  requestMagicLink: ApiGateway['requestMagicLink'] = respondWith({
+    ok: true,
+    data: undefined,
+  }),
+) {
   const gatewayLoader = jest.fn(() =>
     Promise.resolve(fakeGateway(requestMagicLink)),
   );
@@ -125,21 +133,21 @@ describe('LoginContainer', () => {
     expect(await screen.findByText('Revisa tu correo')).toBeInTheDocument();
   });
 
-  it.each<[string, ApiResult<void>]>([
-    ['success', { ok: true, data: undefined }],
-    ['rate limit', { ok: false, error: 'rate-limited', status: 429 }],
-    ['server error', { ok: false, error: 'server', status: 500 }],
-    ['unexpected answer', { ok: false, error: 'unexpected', status: 404 }],
+  it.each<[string, unknown]>([
+    ['an empty 2xx body', undefined],
+    ['a different 2xx body', { delivered: false, note: 'whatever' }],
   ])(
     'renders the same sent HTML for %s (anti-enumeration)',
-    async (_n, result) => {
+    async (_n, data) => {
       const baseline = setup();
       await submit(baseline.user);
       await screen.findByText('Revisa tu correo');
       const expected = screen.getByRole('region').innerHTML;
       baseline.unmount();
 
-      const { user, container } = setup(respondWith(result));
+      const { user, container } = setup(
+        respondWith({ ok: true, data } as ApiResult<void>),
+      );
       await submit(user);
       await screen.findByText('Revisa tu correo');
       expect(screen.getByRole('region').innerHTML).toBe(expected);
@@ -165,9 +173,7 @@ describe('LoginContainer', () => {
     expect(screen.queryByText('Revisa tu correo')).toBeNull();
     expect(activeStep()).toBe(0);
 
-    await user.click(
-      screen.getByRole('button', { name: 'Enviar enlace de acceso' }),
-    );
+    await user.click(screen.getByRole('button', { name: 'Reintentar' }));
     expect(await screen.findByText('Revisa tu correo')).toBeInTheDocument();
     expect(requestMagicLink).toHaveBeenCalledTimes(2);
   });
@@ -289,4 +295,276 @@ describe('LoginContainer', () => {
       ).toHaveLength(1);
     },
   );
+});
+
+const BAD_INPUT: ApiFailure = {
+  error: 'invalid-input',
+  status: 400,
+  reason: 'INVALID_INPUT',
+};
+const FORBIDDEN: ApiFailure = {
+  error: 'forbidden',
+  status: 403,
+  reason: 'ORIGIN_NOT_ALLOWED',
+};
+const RATE_LIMITED: ApiFailure = {
+  error: 'rate-limited',
+  status: 429,
+  reason: 'RATE_LIMITED',
+  retryAfterSeconds: 60,
+};
+const UNAVAILABLE: ApiFailure = {
+  error: 'server',
+  status: 503,
+  reason: 'SERVICE_UNAVAILABLE',
+};
+const NETWORK: ApiFailure = { error: 'network' };
+
+const FAILURES: [string, ApiFailure][] = [
+  ['400', BAD_INPUT],
+  ['403', FORBIDDEN],
+  ['429', RATE_LIMITED],
+  ['503', UNAVAILABLE],
+  ['network', NETWORK],
+];
+
+const failWith = (failure: ApiFailure) =>
+  respondWith({ ok: false, ...failure });
+
+describe('LoginContainer API failures', () => {
+  it('never shows "sent" and gives five different alerts for 400, 403, 429, 503 and network', async () => {
+    const texts: string[] = [];
+    for (const [, failure] of FAILURES) {
+      const { user, unmount } = setup(failWith(failure));
+      await submit(user);
+      const alert = await screen.findByRole('alert');
+      texts.push(alert.textContent ?? '');
+      expect(screen.queryByText('Revisa tu correo')).toBeNull();
+      expect(
+        screen.queryByRole('heading', { name: 'Revisa tu correo' }),
+      ).toBeNull();
+      expect(screen.getByRole('status')).toBeEmptyDOMElement();
+      expect(screen.getByLabelText('Correo corporativo')).toHaveValue(
+        'ana@empresa.com',
+      );
+      expect(activeStep()).toBe(0);
+      unmount();
+    }
+    expect(texts.every((t) => t.length > 0)).toBe(true);
+    expect(new Set(texts).size).toBe(5);
+  });
+
+  it.each(FAILURES)(
+    'does not move focus when %s fails',
+    async (_n, failure) => {
+      let resolve: (value: ApiResult<void>) => void = () => undefined;
+      const pending = jest.fn(
+        () =>
+          new Promise<ApiResult<void>>((r) => {
+            resolve = r;
+          }),
+      );
+      const { user } = setup(pending);
+      await submit(user);
+      await waitFor(() => expect(pending).toHaveBeenCalled());
+      const before = document.activeElement;
+      expect(before).toBe(screen.getByRole('button'));
+      await act(() => {
+        resolve({ ok: false, ...failure });
+        return Promise.resolve();
+      });
+      await screen.findByRole('alert');
+      expect(document.activeElement).toBe(before);
+    },
+  );
+
+  it.each(FAILURES)('shows the dictionary copy for %s', async (_n, failure) => {
+    const { user } = setup(failWith(failure));
+    await submit(user);
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(apiErrorMessage(failure, loginOverrides));
+  });
+
+  it('shows the login copy for 400 and the 429 wait estimate', async () => {
+    const bad = setup(failWith(BAD_INPUT));
+    await submit(bad.user);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Revisa los datos. El correo debe tener el formato nombre@empresa.com.',
+    );
+    bad.unmount();
+    const limited = setup(failWith(RATE_LIMITED));
+    await submit(limited.user);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Espera un minuto',
+    );
+  });
+
+  it('uses the login server copy for a 500 with INTERNAL_ERROR and without code', async () => {
+    for (const failure of [
+      { error: 'server', status: 500, reason: 'INTERNAL_ERROR' },
+      { error: 'server', status: 500 },
+    ] as ApiFailure[]) {
+      const { user, unmount } = setup(failWith(failure));
+      await submit(user);
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Algo falló de nuestro lado y el enlace no se envió. Inténtalo de nuevo.',
+      );
+      unmount();
+    }
+  });
+
+  it('shows the network copy when the gateway cannot load', async () => {
+    const user = userEvent.setup();
+    render(
+      <LoginContainer gatewayLoader={() => Promise.reject(new Error('x'))} />,
+    );
+    await submit(user);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      login.form.networkError,
+    );
+  });
+
+  it.each<[string, ApiFailure, boolean]>([
+    ['400', BAD_INPUT, false],
+    ['403', FORBIDDEN, false],
+    ['429', RATE_LIMITED, false],
+    ['503', UNAVAILABLE, true],
+    ['network', NETWORK, true],
+  ])('submit button for %s', async (_n, failure, retry) => {
+    const { user } = setup(failWith(failure));
+    await submit(user);
+    await screen.findByRole('alert');
+    const buttons = screen.getAllByRole('button');
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toHaveAccessibleName(
+      retry ? 'Reintentar' : 'Enviar enlace de acceso',
+    );
+  });
+
+  it('shows an alert, no sent state and no retry label for an unexpected failure', async () => {
+    const { user } = setup(failWith({ error: 'unexpected', status: 404 }));
+    await submit(user);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      apiErrorMessage({ error: 'unexpected', status: 404 }, loginOverrides),
+    );
+    expect(screen.queryByText('Revisa tu correo')).toBeNull();
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    expect(screen.getByRole('button')).toHaveAccessibleName(
+      'Enviar enlace de acceso',
+    );
+  });
+
+  it('sends one request per manual retry even on a double click', async () => {
+    let resolve: (value: ApiResult<void>) => void = () => undefined;
+    const requestMagicLink = jest
+      .fn<ReturnType<ApiGateway['requestMagicLink']>, []>()
+      .mockResolvedValueOnce({ ok: false, ...UNAVAILABLE })
+      .mockImplementationOnce(
+        () =>
+          new Promise<ApiResult<void>>((r) => {
+            resolve = r;
+          }),
+      );
+    const { user } = setup(requestMagicLink);
+    await submit(user);
+    const retry = await screen.findByRole('button', { name: 'Reintentar' });
+    await user.dblClick(retry);
+    await waitFor(() => expect(requestMagicLink).toHaveBeenCalledTimes(2));
+    await act(() => {
+      resolve({ ok: true, data: undefined });
+      return Promise.resolve();
+    });
+    await screen.findByText('Revisa tu correo');
+    expect(requestMagicLink).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries manually and shows sent when the second attempt succeeds', async () => {
+    const requestMagicLink = jest
+      .fn<ReturnType<ApiGateway['requestMagicLink']>, []>()
+      .mockResolvedValueOnce({ ok: false, ...UNAVAILABLE })
+      .mockResolvedValueOnce({ ok: true, data: undefined });
+    const { user } = setup(requestMagicLink);
+    await submit(user);
+    await user.click(await screen.findByRole('button', { name: 'Reintentar' }));
+    expect(await screen.findByText('Revisa tu correo')).toBeInTheDocument();
+    expect(requestMagicLink).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(FAILURES)('has no axe violations on %s', async (_n, failure) => {
+    process.env.NEXT_PUBLIC_API_MODE = 'mock';
+    const { user, container } = setup(failWith(failure));
+    await submit(user);
+    await screen.findByRole('alert');
+    expect(await axe(container)).toHaveNoViolations();
+  });
+});
+
+describe('LoginContainer without automatic retry or live countdown', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  it('calls requestMagicLink exactly once after a 503 even as time passes', async () => {
+    const requestMagicLink = failWith(UNAVAILABLE);
+    const gatewayLoader = () => Promise.resolve(fakeGateway(requestMagicLink));
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    render(<LoginContainer gatewayLoader={gatewayLoader} />);
+    await submit(user);
+    await screen.findByRole('alert');
+    await act(() => jest.advanceTimersByTimeAsync(10 * 60 * 1000));
+    expect(requestMagicLink).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the 429 text unchanged as the clock advances', async () => {
+    const gatewayLoader = () =>
+      Promise.resolve(fakeGateway(failWith(RATE_LIMITED)));
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    render(<LoginContainer gatewayLoader={gatewayLoader} />);
+    await submit(user);
+    const before = (await screen.findByRole('alert')).textContent;
+    expect(before).toContain('un minuto');
+    await act(() => jest.advanceTimersByTimeAsync(5 * 60 * 1000));
+    expect(screen.getByRole('alert').textContent).toBe(before);
+  });
+});
+
+describe('LoginContainer anti-enumeration of errors', () => {
+  const normalize = (html: string) => html.replace(/ value="[^"]*"/g, '');
+
+  it.each(FAILURES)(
+    'renders the same DOM for a registered and an unknown email on %s',
+    async (_n, failure) => {
+      const emails = [
+        'registrada@empresa.example.test',
+        'desconocida@otra.example.test',
+      ];
+      const requestMagicLink = jest.fn((request: MagicLinkRequest) => {
+        void request;
+        return Promise.resolve({ ok: false, ...failure } as ApiResult<void>);
+      });
+      const htmls: string[] = [];
+      for (const address of emails) {
+        const { user, unmount } = setup(requestMagicLink);
+        await submit(user, address);
+        await screen.findByRole('alert');
+        htmls.push(normalize(screen.getByRole('region').innerHTML));
+        unmount();
+      }
+      expect(requestMagicLink.mock.calls.map(([r]) => r.email)).toEqual(emails);
+      expect(htmls[0]).toBe(htmls[1]);
+    },
+  );
+
+  it('never renders the API message nor CloudFront', async () => {
+    const leaky = {
+      ok: false,
+      error: 'forbidden',
+      status: 403,
+      reason: 'CDN_REQUIRED',
+      message: 'Blocked by CloudFront: raw API message',
+    } as ApiResult<void>;
+    const { user, container } = setup(respondWith(leaky));
+    await submit(user);
+    await screen.findByRole('alert');
+    expect(container.innerHTML).not.toMatch(/CloudFront|raw API message/);
+  });
 });

@@ -4,10 +4,12 @@ import { useReducer, useState } from 'react';
 import { loadGateway } from '@/lib/api';
 import type { ApiGateway } from '@/lib/api/port';
 import type { MagicLinkRequest } from '@/lib/api/types';
+import { apiErrorMessage } from '@/lib/apiErrorMessage';
 import { VisuallyHidden } from '@/components/ui/VisuallyHidden';
 import { login } from '@/content/login';
 import styles from './LoginContainer.module.css';
 import { LoginForm } from './LoginForm';
+import { loginOverrides } from './loginOverrides';
 import { initialLoginState, loginReducer, stepIndex } from './loginReducer';
 import { SentView } from './SentView';
 import { StepsPanel } from './StepsPanel';
@@ -28,15 +30,15 @@ export function LoginContainer({
     try {
       const gateway = await gatewayLoader();
       const result = await gateway.requestMagicLink(request);
-      // Anti-enumeration: only a network failure is told apart. Any other
-      // answer looks exactly like success.
-      if (!result.ok && result.error === 'network') {
-        dispatch({ type: 'FAILED', kind: 'network' });
-      } else {
+      // "Sent" only on 2xx. No possible error depends on the email (format,
+      // origin, IP limit, infrastructure), so showing them leaks nothing.
+      if (result.ok) {
         dispatch({ type: 'SUCCEEDED' });
+      } else {
+        dispatch({ type: 'FAILED', failure: result });
       }
     } catch {
-      dispatch({ type: 'FAILED', kind: 'network' });
+      dispatch({ type: 'FAILED', failure: { error: 'network' } });
     }
   }
 
@@ -55,7 +57,16 @@ export function LoginContainer({
           <LoginForm
             onSubmit={(request) => void handleSubmit(request)}
             submitting={state.status === 'submitting'}
-            networkError={state.status === 'error'}
+            errorMessage={
+              state.status === 'error'
+                ? apiErrorMessage(state.failure, loginOverrides)
+                : undefined
+            }
+            retry={
+              state.status === 'error' &&
+              (state.failure.error === 'server' ||
+                state.failure.error === 'network')
+            }
             autoFocusEmail={focusEmail}
           />
         )}

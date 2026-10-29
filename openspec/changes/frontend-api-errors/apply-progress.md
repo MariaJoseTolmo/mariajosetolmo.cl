@@ -1,6 +1,6 @@
 # Apply progress: frontend-api-errors
 
-> Lotes: 1 = PR A (U0a+U0b), hecho. 2 = PR B (U1a+U1b), hecho. Pendientes: PR C (U2) y PR D (U3a+U3b).
+> Lotes: 1 = PR A (U0a+U0b), hecho. 2 = PR B (U1a+U1b), hecho. 3 = PR C (U2), hecho. Pendiente: PR D (U3a+U3b).
 
 > Modo: Strict TDD. Entrega: 4 PRs con `size:exception`, `stacked-to-main` (A = U0a+U0b, B = U1a+U1b, C = U2, D = U3a+U3b).
 
@@ -115,3 +115,51 @@ El runner de la web (`next/jest`, SWC) no tipa: un import inexistente falla en e
 | S2 | `apiErrorMessage.test.ts`: 1 fallo (un 503 con override `{wait}` sin tiempo devolvía el copy de límite de intentos) | `waitNeutral` ("unos minutos") en `content/apiErrors.ts` y `types.ts`; `waitUnknown` solo si `error === 'rate-limited'` |
 
 Resultados tras las correcciones: web 90 suites, 1308 tests; cobertura 99,87 % sentencias / 99,3 % ramas / 99,48 % funciones / 100 % líneas; `eslint . --max-warnings 0` exit 0; `tsc --noEmit` exit 0; prettier limpio; build OK (`check-out: out OK`).
+
+## Lote 3 — PR C (web: U2, login)
+
+Tareas completadas: 5.1–5.5 (5 de 5 del PR C). Pendientes: U3a, U3b (PR D). `size:exception` (4 PRs, `stacked-to-main`).
+
+### TDD Cycle Evidence
+
+| Tarea | RED | GREEN | REFACTOR |
+|-------|-----|-------|----------|
+| 5.1 | `loginReducer.test.ts` 1 fallo de aserción (`FAILED` sin `failure`: `kind: undefined`); `LoginContainer.test.tsx` 20 fallos de aserción (sin alerta para 400/403/429/503, diccionario, 500, botón, reintento manual, axe, mismo DOM, sin `message`), con un stub `loginOverrides = {}` para que el import no sea el fallo | `loginReducer` con `failure`; `LoginContainer` envía "sent" solo con `result.ok` y pasa `apiErrorMessage(failure, loginOverrides)`; `loginOverrides.ts` | Tests de 429/anti-enumeración con constantes nombradas (`noUncheckedIndexedAccess`) |
+| 5.2 | `LoginForm.test.tsx`: 2 fallos de aserción (sin alerta con `errorMessage`; sin botón "Reintentar") | `errorMessage` + `retry` (reemplazan a `networkError`); `retryLabel`, `invalidInputError`, `serverError` en `content/login.ts` y `types.ts` | Test previo "network failure" ajustado: el botón ahora dice "Reintentar" |
+| 5.3 | Timers falsos: 2 fallos de aserción (sin alerta, por no existir el estado de error para 503/429) | Pasa sin lógica de reintento ni cuenta atrás: 1 llamada tras 10 min; texto 429 estable tras 5 min | — |
+| 5.4 | Mismos fallos del contenedor (mismo DOM por correo, sin `message`/CloudFront) | Pasan: 5 fallos x 2 correos dan el mismo DOM (sin `value`), `requestMagicLink` recibe ambos correos; 2xx distintos dan el mismo HTML "sent"; `jest-axe` 0 en 400/403/429/503/network | — |
+| 5.5 | Sin RED: el delta `web-recruiter-access` (requisito "Estado 'enviado' idéntico") ya existe en `specs/`; solo verify lo compara | — | — |
+
+### Resultados finales (apps/web)
+
+| Chequeo | Resultado |
+|---------|-----------|
+| Unitarias con cobertura (`npm run test:cov -w apps/web`) | 90 suites, 1340 tests (exit 0); 99,87 % sentencias / 99,31 % ramas / 99,48 % funciones / 100 % líneas |
+| `npx eslint . --max-warnings 0` (raíz) | exit 0 |
+| `npm run typecheck` (raíz, todos los workspaces) | exit 0 |
+| `npx prettier --check .` | exit 0 |
+| `npm run build -w apps/web` | exit 0 (`check-out: out OK`) |
+
+### Archivos
+
+- Creado: `apps/web/src/features/login/loginOverrides.ts`.
+- Modificados: `features/login/{loginReducer,LoginContainer,LoginForm}.tsx|ts` + sus tests, `content/{login,types}.ts`, `content/login.test.ts`.
+
+### Desviaciones y notas
+
+- `LoginForm` recibe `retry?: boolean` (el texto vive en `login.form.retryLabel`) en lugar de una prop `retryLabel`.
+- Los overrides de login viven en `features/login/loginOverrides.ts` (copy en `content/login.ts`), no en `content/`, para no romper el import relativo del typecheck de la API.
+- La web no pasa el `message` de la API: `apiErrorMessage` nunca lo lee; el test inyecta un `message` con "CloudFront" y comprueba que no llega al DOM.
+- Los tests previos que exigían "sent" para 429/500/inesperado se reemplazaron por los de 2xx distintos (cambio de contrato deliberado).
+- Tamaño: 327 adiciones / 46 eliminaciones (~373) + archivo nuevo; cubierto por `size:exception`.
+
+### Lote 3 — correcciones de revisión (W1, W2, S1, S2)
+
+| Id | RED | GREEN |
+|----|-----|-------|
+| W1 | El test de foco antiguo no podía fallar. Nuevo `does not move focus when %s fails`: captura `document.activeElement` (botón de envío) con la petición pendiente y exige el mismo elemento tras la alerta. RED por mutación: se enfocó el input de correo en el fallo y fallaron 5 de 5 (400, 403, 429, 503, network); revertido | Sin cambio de producto: 5 pasan |
+| W2 | `LoginForm.test.tsx`: 1 fallo de aserción (con 503 y correo vacío al pulsar "Reintentar" salían dos alertas) | `errorMessage && !emailError` oculta la alerta de la API mientras hay error local; el botón vuelve a "Enviar enlace de acceso" en ese estado (el fallo previo ya no se muestra, así que "Reintentar" no tendría contexto); al corregir el correo reaparece la alerta de la API con "Reintentar" |
+| S1 | Sin RED de producto: `unexpected` (404) ya mostraba alerta, sin "sent" y sin "Reintentar"; el test lo fija | pasa |
+| S2 | Sin RED de producto: `submitting` ya bloquea el doble envío; doble clic en "Reintentar" con la petición pendiente da exactamente 2 llamadas en total | pasa |
+
+Resultados tras las correcciones: web 90 suites, 1348 tests (exit 0); cobertura 99,87 % sentencias / 99,31 % ramas / 99,48 % funciones / 100 % líneas; `eslint . --max-warnings 0` exit 0; `npm run typecheck` (raíz) exit 0; `prettier --check .` exit 0; `npm run build -w apps/web` exit 0 (`check-out: out OK`).

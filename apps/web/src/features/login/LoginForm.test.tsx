@@ -3,7 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { axe } from '@/test/axe';
 import { LoginForm } from './LoginForm';
 
-function setup(props: { submitting?: boolean; networkError?: boolean } = {}) {
+function setup(
+  props: { submitting?: boolean; errorMessage?: string; retry?: boolean } = {},
+) {
   const onSubmit = jest.fn();
   const user = userEvent.setup();
   const view = render(<LoginForm onSubmit={onSubmit} {...props} />);
@@ -12,7 +14,7 @@ function setup(props: { submitting?: boolean; networkError?: boolean } = {}) {
 
 const email = () => screen.getByLabelText('Correo corporativo');
 const send = () =>
-  screen.getByRole('button', { name: /Enviar enlace|Enviando/ });
+  screen.getByRole('button', { name: /Enviar enlace|Enviando|Reintentar/ });
 
 describe('LoginForm layout', () => {
   it('renders the heading, lead and the three labelled fields', () => {
@@ -245,16 +247,50 @@ describe('LoginForm states', () => {
     ).toHaveAttribute('aria-busy', 'false');
   });
 
-  it('shows a generic alert on network failure and keeps what was typed', async () => {
+  it('shows the given error message in an alert and keeps what was typed', async () => {
     const { rerender, user, onSubmit } = setup();
     await user.type(email(), 'ana@empresa.com');
-    rerender(<LoginForm onSubmit={onSubmit} networkError />);
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'No pudimos enviar el enlace. Revisa tu conexión e inténtalo de nuevo.',
-    );
+    rerender(<LoginForm onSubmit={onSubmit} errorMessage="Algo salió mal." />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Algo salió mal.');
     expect(email()).toHaveValue('ana@empresa.com');
+    expect(send()).toHaveTextContent('Enviar enlace de acceso');
     await user.click(send());
     expect(onSubmit).toHaveBeenCalledWith({ email: 'ana@empresa.com' });
+  });
+
+  it('turns the only submit button into "Reintentar" when retry is set', async () => {
+    const { user, onSubmit } = setup({ errorMessage: 'Falló.', retry: true });
+    await user.type(email(), 'ana@empresa.com');
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    expect(send()).toHaveTextContent('Reintentar');
+    expect(send()).toHaveAttribute('type', 'submit');
+    await user.click(send());
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides the API alert and the retry label while a local email error is shown', async () => {
+    const { user, onSubmit } = setup({
+      errorMessage: 'Falló.',
+      retry: true,
+    });
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    await user.click(send());
+    expect(onSubmit).not.toHaveBeenCalled();
+    const alerts = screen.getAllByRole('alert');
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toHaveTextContent(
+      'Escribe tu correo para recibir el enlace.',
+    );
+    expect(screen.queryByText('Falló.')).toBeNull();
+    expect(send()).toHaveTextContent('Enviar enlace de acceso');
+    await user.type(email(), 'ana@empresa.com');
+    expect(screen.getByRole('alert')).toHaveTextContent('Falló.');
+    expect(send()).toHaveTextContent('Reintentar');
+  });
+
+  it('shows "Enviando…" while submitting even if retry is set', () => {
+    setup({ errorMessage: 'Falló.', retry: true, submitting: true });
+    expect(send()).toHaveTextContent('Enviando…');
   });
 
   it('shows no alert when there is no failure', () => {
@@ -262,8 +298,8 @@ describe('LoginForm states', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
-  it('has no axe violations on network failure', async () => {
-    const { container } = setup({ networkError: true });
+  it('has no axe violations on an error', async () => {
+    const { container } = setup({ errorMessage: 'Falló.', retry: true });
     expect(await axe(container)).toHaveNoViolations();
   });
 });

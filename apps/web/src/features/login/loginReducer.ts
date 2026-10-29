@@ -1,15 +1,15 @@
-import type { ApiErrorKind } from '@/lib/api/types';
+import type { ApiFailure } from '@/lib/api/types';
 
 export type LoginState =
   | { status: 'editing' }
   | { status: 'submitting'; email: string }
   | { status: 'sent'; email: string }
-  | { status: 'error'; kind: ApiErrorKind };
+  | { status: 'error'; failure: ApiFailure };
 
 export type LoginEvent =
   | { type: 'SUBMIT'; email: string }
   | { type: 'SUCCEEDED' }
-  | { type: 'FAILED'; kind: ApiErrorKind }
+  | { type: 'FAILED'; failure: ApiFailure }
   | { type: 'RESET' };
 
 export const initialLoginState: LoginState = { status: 'editing' };
@@ -26,7 +26,7 @@ export function loginReducer(state: LoginState, event: LoginEvent): LoginState {
         : state;
     case 'FAILED':
       return state.status === 'submitting'
-        ? { status: 'error', kind: event.kind }
+        ? { status: 'error', failure: event.failure }
         : state;
     case 'RESET':
       return initialLoginState;

@@ -37,4 +37,13 @@ describe('login content', () => {
     expect(login.form.emailLabel).toBe('Correo corporativo');
     expect(login.form.title).toBe('Acceso para reclutadores');
   });
+
+  it('keeps the login error copy free of the email, raw messages and CloudFront', () => {
+    expect(login.form.retryLabel).toBe('Reintentar');
+    const copy = [login.form.invalidInputError, login.form.serverError];
+    for (const text of copy) {
+      expect(text).not.toMatch(/CloudFront|registrad|existe/i);
+    }
+    expect(new Set([...copy, login.form.networkError]).size).toBe(3);
+  });
 });
