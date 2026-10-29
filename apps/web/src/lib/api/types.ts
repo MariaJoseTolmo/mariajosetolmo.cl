@@ -1,3 +1,5 @@
+import type { ApiErrorReason } from './error-codes';
+
 export type Role = 'RECRUITER' | 'ADMIN';
 
 export interface MagicLinkRequest {
@@ -38,16 +40,27 @@ export interface RawResponse {
   status: number;
   statusText: string;
   body: unknown;
+  /** Set only for status >= 400 and != 401; the playground shows its copy. */
+  failure?: ApiFailure;
 }
 
 export type ApiErrorKind =
   | 'unauthorized'
   | 'forbidden'
   | 'invalid-token'
+  | 'invalid-input'
   | 'rate-limited'
   | 'network'
   | 'server'
   | 'unexpected';
 
-export type ApiResult<T> =
-  { ok: true; data: T } | { ok: false; error: ApiErrorKind; status?: number };
+export interface ApiFailure {
+  error: ApiErrorKind;
+  /** Absent when there was no HTTP response (network failure). */
+  status?: number;
+  /** Derived only from a `code` that belongs to the catalog. */
+  reason?: ApiErrorReason;
+  retryAfterSeconds?: number;
+}
+
+export type ApiResult<T> = { ok: true; data: T } | ({ ok: false } & ApiFailure);

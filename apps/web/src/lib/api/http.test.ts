@@ -14,7 +14,11 @@ const ME = {
   availability: { modality: 'm', start: 's', salary: 'r' },
 };
 
-function res(status: number, body?: unknown): ResponseLike {
+function res(
+  status: number,
+  body?: unknown,
+  headers: Record<string, string> = {},
+): ResponseLike {
   const text =
     body === undefined
       ? ''
@@ -26,6 +30,7 @@ function res(status: number, body?: unknown): ResponseLike {
     ok: status >= 200 && status < 300,
     statusText: `status ${status}`,
     text: () => Promise.resolve(text),
+    headers: { get: (name) => headers[name.toLowerCase()] ?? null },
   };
 }
 
@@ -270,6 +275,7 @@ describe('session refresh', () => {
     expect(await createHttpGateway(fetchImpl).getMe()).toEqual({
       ok: false,
       error: 'server',
+      status: 502,
     });
   });
 
@@ -325,6 +331,7 @@ describe('call', () => {
         status: 403,
         statusText: 'status 403',
         body: { statusCode: 403, message: 'Forbidden' },
+        failure: { error: 'forbidden', status: 403 },
       },
     });
   });
@@ -412,6 +419,7 @@ describe('body read failures', () => {
     ok: status >= 200 && status < 300,
     statusText: `status ${status}`,
     text: () => Promise.reject(new TypeError('body stream failed')),
+    headers: { get: () => null },
   });
 
   it('resolves network when the body of a data call cannot be read', async () => {
@@ -488,6 +496,168 @@ describe('caching and refresh throttling', () => {
     expect(await createHttpGateway(fetchImpl).getMe()).toEqual({
       ok: false,
       error: 'rate-limited',
+      status: 429,
     });
+  });
+});
+
+const FORBIDDEN_BODY = (code: string) => ({
+  statusCode: 403,
+  error: 'Forbidden',
+  message: 'fixed message',
+  code,
+});
+
+describe('error translation', () => {
+  const gateway = (r: ResponseLike | Error) =>
+    createHttpGateway(fakeFetch(() => r).fetchImpl);
+
+  it('keeps the reason of a 403 ORIGIN_NOT_ALLOWED', async () => {
+    const result = await gateway(
+      res(403, FORBIDDEN_BODY('ORIGIN_NOT_ALLOWED')),
+    ).requestMagicLink({ email: 'a@b.cl' });
+    expect(result).toEqual({
+      ok: false,
+      error: 'forbidden',
+      status: 403,
+      reason: 'ORIGIN_NOT_ALLOWED',
+    });
+  });
+
+  it('exposes Retry-After on a 429', async () => {
+    const result = await gateway(
+      res(429, { code: 'RATE_LIMITED' }, { 'retry-after': '120' }),
+    ).requestMagicLink({ email: 'a@b.cl' });
+    expect(result).toEqual({
+      ok: false,
+      error: 'rate-limited',
+      status: 429,
+      reason: 'RATE_LIMITED',
+      retryAfterSeconds: 120,
+    });
+  });
+
+  it('keeps the reason of a 503', async () => {
+    expect(
+      await gateway(res(503, { code: 'SERVICE_UNAVAILABLE' })).getMe(),
+    ).toEqual({
+      ok: false,
+      error: 'server',
+      status: 503,
+      reason: 'SERVICE_UNAVAILABLE',
+    });
+  });
+
+  it('reports an unreadable error body as server, not network', async () => {
+    const unreadable: ResponseLike = {
+      ...res(500),
+      text: () => Promise.reject(new TypeError('stream failed')),
+    };
+    expect(await gateway(unreadable).getMe()).toEqual({
+      ok: false,
+      error: 'server',
+      status: 500,
+    });
+  });
+
+  it('reports a rejected fetch as network without a status', async () => {
+    expect(await gateway(new TypeError('offline')).getMe()).toEqual({
+      ok: false,
+      error: 'network',
+    });
+  });
+
+  it('falls back to the status for an API that sends no code', async () => {
+    expect(await gateway(res(403, 'plain html')).getCvLink()).toEqual({
+      ok: false,
+      error: 'forbidden',
+      status: 403,
+    });
+  });
+
+  it('uses the code in the verify context', async () => {
+    expect(
+      await gateway(res(400, { code: 'INVALID_TOKEN' })).verifyToken('abc'),
+    ).toEqual({
+      ok: false,
+      error: 'invalid-token',
+      status: 400,
+      reason: 'INVALID_TOKEN',
+    });
+  });
+
+  it('never reads the 2xx body of a magic-link request', async () => {
+    const text = jest.fn(() => Promise.reject(new Error('must not read')));
+    const response: ResponseLike = { ...res(202), text };
+    await gateway(response).requestMagicLink({ email: 'a@b.cl' });
+    expect(text).not.toHaveBeenCalled();
+  });
+
+  it('attaches the failure to a playground 4xx/5xx response', async () => {
+    const body = FORBIDDEN_BODY('ROLE_NOT_ALLOWED');
+    expect(await gateway(res(403, body)).call('/api/v1/admin/visits')).toEqual({
+      ok: true,
+      data: {
+        status: 403,
+        statusText: 'status 403',
+        body,
+        failure: {
+          error: 'forbidden',
+          status: 403,
+          reason: 'ROLE_NOT_ALLOWED',
+        },
+      },
+    });
+  });
+});
+
+describe('refresh failures (A11)', () => {
+  const meWithRefresh = (refresh: ResponseLike) =>
+    createHttpGateway(
+      fakeFetch((call) =>
+        call.path === '/api/auth/refresh' ? refresh : res(401),
+      ).fetchImpl,
+    ).getMe();
+
+  it('treats a 400 refresh as unauthorized', async () => {
+    expect(await meWithRefresh(res(400))).toEqual({
+      ok: false,
+      error: 'unauthorized',
+    });
+  });
+
+  it('keeps a blocked refresh as forbidden with its reason', async () => {
+    expect(
+      await meWithRefresh(res(403, FORBIDDEN_BODY('CDN_REQUIRED'))),
+    ).toEqual({
+      ok: false,
+      error: 'forbidden',
+      status: 403,
+      reason: 'CDN_REQUIRED',
+    });
+  });
+
+  it('keeps Retry-After from a throttled refresh', async () => {
+    expect(
+      await meWithRefresh(res(429, null, { 'retry-after': '30' })),
+    ).toEqual({
+      ok: false,
+      error: 'rate-limited',
+      status: 429,
+      retryAfterSeconds: 30,
+    });
+  });
+
+  it('runs one refresh and two reads when the retry is 401 again', async () => {
+    const { fetchImpl, calls } = fakeFetch((call) =>
+      call.path === '/api/auth/refresh' ? res(200) : res(401),
+    );
+    const result = await createHttpGateway(fetchImpl).getMe();
+    expect(result).toMatchObject({ ok: false, error: 'unauthorized' });
+    expect(summary(calls)).toEqual([
+      'GET /api/v1/me',
+      'POST /api/auth/refresh',
+      'GET /api/v1/me',
+    ]);
   });
 });

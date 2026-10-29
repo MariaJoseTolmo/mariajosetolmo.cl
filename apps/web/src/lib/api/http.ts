@@ -1,7 +1,8 @@
-import { errorFromStatus, failure, type ErrorContext } from './errors';
+import { failure, toApiFailure, type ErrorContext } from './errors';
 import type { ApiGateway } from './port';
 import { isPlaygroundEndpoint } from './playground-endpoints';
 import type {
+  ApiFailure,
   ApiResult,
   CvLink,
   Me,
@@ -15,6 +16,7 @@ export interface ResponseLike {
   ok: boolean;
   statusText: string;
   text(): Promise<string>;
+  headers: { get(name: string): string | null };
 }
 
 export type FetchLike = (
@@ -97,6 +99,26 @@ async function readBody(response: ResponseLike): Promise<BodyOutcome> {
   }
 }
 
+/** Error bodies are best effort: an unreadable one becomes `null`, not `network`. */
+async function readErrorBody(response: ResponseLike): Promise<unknown> {
+  const read = await readBody(response);
+  return 'failed' in read ? null : read.body;
+}
+
+async function failureOf(
+  response: ResponseLike,
+  context?: ErrorContext,
+): Promise<ApiFailure> {
+  return toApiFailure(
+    {
+      status: response.status,
+      body: await readErrorBody(response),
+      retryAfter: response.headers.get('Retry-After'),
+    },
+    context,
+  );
+}
+
 export interface HttpGatewayOptions {
   /** Aborts a request after this many ms; reported as `network`. */
   timeoutMs?: number;
@@ -128,10 +150,13 @@ export function createHttpGateway(
   async function performRefresh(): Promise<ApiResult<void>> {
     const outcome = await send('POST', REFRESH_PATH);
     if ('failed' in outcome) return outcome.failed;
-    const { status, ok } = outcome.response;
-    if (ok) return { ok: true, data: undefined };
-    if (status === 429) return failure('rate-limited');
-    return failure(status >= 500 ? 'server' : 'unauthorized');
+    const { response } = outcome;
+    if (response.ok) return { ok: true, data: undefined };
+    // A rejected session (400/401) is the only refresh failure that logs out.
+    if (response.status === 400 || response.status === 401) {
+      return failure('unauthorized');
+    }
+    return { ok: false, ...(await failureOf(response)) };
   }
 
   /** One shared in-flight refresh; cleared once it settles. */
@@ -172,7 +197,7 @@ export function createHttpGateway(
     const { response } = outcome;
     return response.ok
       ? { ok: true, data: undefined }
-      : failure(errorFromStatus(response.status, context), response.status);
+      : { ok: false, ...(await failureOf(response, context)) };
   }
 
   async function expectData<T>(
@@ -182,9 +207,7 @@ export function createHttpGateway(
     const outcome = await request('GET', path);
     if ('failed' in outcome) return outcome.failed;
     const { response } = outcome;
-    if (!response.ok) {
-      return failure(errorFromStatus(response.status), response.status);
-    }
+    if (!response.ok) return { ok: false, ...(await failureOf(response)) };
     const read = await readBody(response);
     if ('failed' in read) return read.failed;
     return isValid(read.body)
@@ -207,16 +230,24 @@ export function createHttpGateway(
       if ('failed' in outcome) return outcome.failed;
       const { response } = outcome;
       if (response.status === 401) return failure('unauthorized', 401);
-      const read = await readBody(response);
+      const isError = response.status >= 400;
+      const read = isError
+        ? { body: await readErrorBody(response) }
+        : await readBody(response);
       if ('failed' in read) return read.failed;
-      return {
-        ok: true,
-        data: {
-          status: response.status,
-          statusText: response.statusText,
-          body: read.body,
-        },
+      const data: RawResponse = {
+        status: response.status,
+        statusText: response.statusText,
+        body: read.body,
       };
+      if (isError) {
+        data.failure = toApiFailure({
+          status: response.status,
+          body: read.body,
+          retryAfter: response.headers.get('Retry-After'),
+        });
+      }
+      return { ok: true, data };
     },
   };
 }

@@ -1,3 +1,6 @@
+import type { ApiErrorReason } from '../lib/api/error-codes';
+import type { ApiErrorKind } from '../lib/api/types';
+
 export interface NavLink {
   label: string;
   href: string;
@@ -210,5 +213,22 @@ export interface RecruiterContent {
     loadingStatus: string;
     failed: string;
     failedStatus: string;
+  };
+}
+
+export interface ApiErrorsContent {
+  reasons: Record<ApiErrorReason, string>;
+  kinds: Record<ApiErrorKind, string>;
+  /** Full sentence used when a text needs `{wait}` but no time is known. */
+  waitUnknown: string;
+  /** Fills `{wait}` for non rate-limited texts when no time is known. */
+  waitNeutral: string;
+  /** `{count}` is replaced by the rounded-up amount. */
+  wait: {
+    seconds: string;
+    minute: string;
+    minutes: string;
+    hour: string;
+    hours: string;
   };
 }
