@@ -1,5 +1,5 @@
-import type { ApiErrorReason } from '@/lib/api/error-codes';
-import type { ApiErrorKind } from '@/lib/api/types';
+import type { ApiErrorReason } from '../lib/api/error-codes';
+import type { ApiErrorKind } from '../lib/api/types';
 
 export interface NavLink {
   label: string;
