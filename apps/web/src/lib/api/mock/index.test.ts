@@ -110,9 +110,137 @@ describe('mock gateway', () => {
         data: {
           status: 403,
           statusText: 'Forbidden',
-          body: { statusCode: 403, message: 'Forbidden' },
+          body: {
+            statusCode: 403,
+            error: 'Forbidden',
+            message: 'Forbidden resource',
+            code: 'ROLE_NOT_ALLOWED',
+          },
+          failure: {
+            error: 'forbidden',
+            status: 403,
+            reason: 'ROLE_NOT_ALLOWED',
+          },
         },
       });
     });
   });
+});
+
+describe('one-shot error injection', () => {
+  const KEY = 'web-cv-mock-error';
+  const inject = (value: string) => window.sessionStorage.setItem(KEY, value);
+
+  it.each([
+    ['ORIGIN_NOT_ALLOWED', { error: 'forbidden', status: 403 }],
+    [
+      'RATE_LIMITED:120',
+      { error: 'rate-limited', status: 429, retryAfterSeconds: 120 },
+    ],
+    ['RATE_LIMITED', { error: 'rate-limited', status: 429 }],
+    ['SERVICE_UNAVAILABLE', { error: 'server', status: 503 }],
+  ])('fails the next call as %s', async (value, expected) => {
+    inject(value);
+    const code = value.split(':')[0];
+    expect(await createMockGateway().getMe()).toEqual({
+      ok: false,
+      reason: code,
+      ...expected,
+    });
+  });
+
+  it('applies to every gateway method', async () => {
+    const gateway = createMockGateway();
+    const calls = [
+      () => gateway.requestMagicLink({ email: 'a@example.test' }),
+      () => gateway.verifyToken(MOCK_TOKEN),
+      () => gateway.getCvLink(),
+      () => gateway.logout(),
+    ];
+    for (const run of calls) {
+      inject('SERVICE_UNAVAILABLE');
+      expect(await run()).toMatchObject({
+        ok: false,
+        reason: 'SERVICE_UNAVAILABLE',
+      });
+    }
+  });
+
+  it('answers a playground call like the http adapter: 4xx/5xx as data', async () => {
+    inject('SERVICE_UNAVAILABLE');
+    expect(await createMockGateway().call('/api/v1/profile')).toEqual({
+      ok: true,
+      data: {
+        status: 503,
+        statusText: 'Service Unavailable',
+        body: {
+          statusCode: 503,
+          error: 'Service Unavailable',
+          message: 'Mock error',
+          code: 'SERVICE_UNAVAILABLE',
+        },
+        failure: {
+          error: 'server',
+          status: 503,
+          reason: 'SERVICE_UNAVAILABLE',
+        },
+      },
+    });
+  });
+
+  it('keeps Retry-After in the playground failure', async () => {
+    inject('RATE_LIMITED:120');
+    expect(await createMockGateway().call('/api/v1/me')).toMatchObject({
+      ok: true,
+      data: {
+        status: 429,
+        failure: { error: 'rate-limited', retryAfterSeconds: 120 },
+      },
+    });
+  });
+
+  it('answers a playground UNAUTHENTICATED as a failure, like http', async () => {
+    inject('UNAUTHENTICATED');
+    expect(await createMockGateway().call('/api/v1/me')).toEqual({
+      ok: false,
+      error: 'unauthorized',
+      status: 401,
+    });
+  });
+
+  it('is consumed by the first call: the second one is not injected', async () => {
+    inject('SERVICE_UNAVAILABLE');
+    const gateway = createMockGateway();
+    expect(
+      (await gateway.requestMagicLink({ email: 'a@example.test' })).ok,
+    ).toBe(false);
+    expect(window.sessionStorage.getItem(KEY)).toBeNull();
+    expect(await gateway.requestMagicLink({ email: 'a@example.test' })).toEqual(
+      {
+        ok: true,
+        data: undefined,
+      },
+    );
+  });
+
+  it('does not depend on the email', async () => {
+    const gateway = createMockGateway();
+    inject('RATE_LIMITED:30');
+    const a = await gateway.requestMagicLink({ email: 'a@example.test' });
+    inject('RATE_LIMITED:30');
+    const b = await gateway.requestMagicLink({ email: 'b@example.test' });
+    expect(a).toEqual(b);
+    expect(a.ok).toBe(false);
+  });
+
+  it.each(['', 'NOPE', 'RATE_LIMITED:abc', 'RATE_LIMITED:0', 'ALGO_NUEVO:5'])(
+    'ignores the invalid value %j',
+    async (value) => {
+      inject(value);
+      expect(
+        await createMockGateway().requestMagicLink({ email: 'a@example.test' }),
+      ).toEqual({ ok: true, data: undefined });
+      expect(window.sessionStorage.getItem(KEY)).toBeNull();
+    },
+  );
 });

@@ -502,6 +502,7 @@ describe('RecruiterZone with the real http adapter', () => {
     ok: status >= 200 && status < 300,
     statusText: `status ${status}`,
     text: () => Promise.resolve(body === undefined ? '' : JSON.stringify(body)),
+    headers: { get: () => null },
   });
 
   it('recovers the session: GET /me 401, refresh 200, retry 200, then shows the authorized view', async () => {
