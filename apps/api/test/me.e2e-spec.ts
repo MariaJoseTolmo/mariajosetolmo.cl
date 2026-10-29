@@ -70,13 +70,17 @@ describe('GET /api/v1/me (e2e)', () => {
   it('answers 401 JSON without a session', async () => {
     const res = await getMe().expect(401);
     expect(res.headers['content-type']).toMatch(/application\/json/);
-    expect(res.body).toMatchObject({ statusCode: 401 });
+    expect(res.body).toMatchObject({
+      statusCode: 401,
+      code: 'UNAUTHENTICATED',
+    });
   });
 
   it('answers 401 when the user no longer exists', async () => {
     const cookie = await t.login();
     t.users.remove('user-1');
-    await getMe(cookie).expect(401);
+    const res = await getMe(cookie).expect(401);
+    expect(res.body).toMatchObject({ code: 'UNAUTHENTICATED' });
   });
 
   describe('rejects bad access tokens', () => {

@@ -1,4 +1,4 @@
-import { InvalidInput } from '../../shared/domain/errors';
+import { InvalidToken } from '../../shared/domain/errors';
 import { sha256Hex } from '../../shared/domain/hash';
 import { MalformedToken } from './auth-errors';
 import { MagicLinkToken, magicLinkUrl } from './magic-link-token';
@@ -39,7 +39,7 @@ describe('MagicLinkToken', () => {
     ['missing', undefined],
   ])('rejects %s as malformed (a 400)', (_label, raw) => {
     expect(() => MagicLinkToken.parse(raw)).toThrow(MalformedToken);
-    expect(() => MagicLinkToken.parse(raw)).toThrow(InvalidInput);
+    expect(() => MagicLinkToken.parse(raw)).toThrow(InvalidToken);
   });
 
   it('never echoes the rejected value in the error', () => {

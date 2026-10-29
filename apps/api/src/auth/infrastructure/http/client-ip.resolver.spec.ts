@@ -1,4 +1,4 @@
-import { Forbidden } from '../../../shared/domain/errors';
+import { CdnRequired } from '../../../shared/domain/errors';
 import {
   CloudFrontViewerAddressResolver,
   SocketAddressResolver,
@@ -50,9 +50,9 @@ describe('CloudFrontViewerAddressResolver', () => {
     ['empty port', { 'cloudfront-viewer-address': '203.0.113.7:' }],
     ['non-numeric port', { 'cloudfront-viewer-address': '203.0.113.7:80a' }],
     ['oversized port', { 'cloudfront-viewer-address': '203.0.113.7:123456' }],
-  ])('fails closed with Forbidden on %s', (_name, headers) => {
+  ])('fails closed with CdnRequired on %s', (_name, headers) => {
     expect(() => resolver.resolve(request(headers, '127.0.0.1'))).toThrow(
-      Forbidden,
+      CdnRequired,
     );
   });
 
@@ -81,7 +81,7 @@ describe('CloudFrontViewerAddressResolver', () => {
   it('never trusts X-Forwarded-For when the CloudFront header is missing', () => {
     expect(() =>
       resolver.resolve(request({ 'x-forwarded-for': '198.51.100.99' })),
-    ).toThrow(Forbidden);
+    ).toThrow(CdnRequired);
   });
 });
 

@@ -1,14 +1,14 @@
 import { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
-import { DomainExceptionFilter } from '../shared/infrastructure/http/domain-exception.filter';
+import { ApiExceptionFilter } from '../shared/infrastructure/http/api-exception.filter';
 import { noStore } from './no-store';
 
 export function configureApp(app: INestApplication): INestApplication {
   app.setGlobalPrefix('api');
   app.use(cookieParser());
   app.use(noStore);
-  app.useGlobalFilters(new DomainExceptionFilter());
+  app.useGlobalFilters(new ApiExceptionFilter());
   const config = new DocumentBuilder()
     .setTitle('web_cv API')
     // Names only: the docs never carry example cookie or token values.

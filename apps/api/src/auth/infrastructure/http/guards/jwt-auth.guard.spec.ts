@@ -1,5 +1,6 @@
-import { type ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import type { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { Unauthenticated } from '../../../../shared/domain/errors';
 import { handlerOf } from '../../../../../test/support/handler-of';
 import { FakeClock } from '../../../../../test/support/fakes/fake-clock';
 import { testConfig } from '../../../../../test/support/test-config';
@@ -94,7 +95,7 @@ describe('JwtAuthGuard', () => {
   ])('answers 401 with %s', async (_name, req: TestRequest) => {
     const { guard } = build();
     await expect(guard.canActivate(securedContext(req))).rejects.toThrow(
-      UnauthorizedException,
+      Unauthenticated,
     );
     expect(req.principal).toBeUndefined();
   });

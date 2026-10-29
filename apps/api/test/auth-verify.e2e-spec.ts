@@ -201,7 +201,10 @@ describe('POST /api/auth/verify', () => {
     const expectRefused = (res: request.Response): void => {
       expect(res.status).toBe(400);
       expect(res.headers['content-type']).toMatch(/application\/json/);
-      expect(res.body).toMatchObject({ statusCode: 400 });
+      expect(res.body).toMatchObject({
+        statusCode: 400,
+        code: 'INVALID_TOKEN',
+      });
       expect(res.headers['set-cookie']).toBeUndefined();
     };
 
@@ -226,6 +229,31 @@ describe('POST /api/auth/verify', () => {
       expectRefused(await verify('basura'));
       expectRefused(await verify(undefined));
       expectRefused(await post('/api/auth/verify', {}));
+    });
+
+    it('gives the same status and code for unknown, expired, used and malformed', async () => {
+      const used = await requestLink('used@example.test');
+      await verify(used).expect(204);
+      const expired = await requestLink('late@example.test');
+      t.clock.advanceSeconds(900);
+      const causes = {
+        unknown: 'N'.repeat(43),
+        expired,
+        used,
+        malformed: 'basura',
+      };
+      const answers = await Promise.all(
+        Object.values(causes).map((token) => verify(token)),
+      );
+      const seen = new Set(
+        answers.map((res) => {
+          const body = res.body as { statusCode: number; code: string };
+          return `${res.status}:${body.statusCode}:${body.code}`;
+        }),
+      );
+      expect([...seen]).toEqual(['400:400:INVALID_TOKEN']);
+      // Server-side states (unknown, expired, used) cannot be told apart at all.
+      expect(new Set(answers.slice(0, 3).map((res) => res.text)).size).toBe(1);
     });
 
     it('never answers 403 or 404 for a bad token', async () => {
@@ -264,6 +292,29 @@ describe('POST /api/auth/verify', () => {
       expect(res.headers['retry-after']).toBe('540');
       expect(res.headers['set-cookie']).toBeUndefined();
       await verify('L'.repeat(43), '203.0.113.99:1').expect(400);
+    });
+  });
+
+  describe('a malformed token and the per-IP limit', () => {
+    it('is refused before it spends the IP budget, and answers like any bad token', async () => {
+      await open({
+        config: {
+          rateLimits: {
+            magicLinkIp: { limit: 10, windowSeconds: 900 },
+            magicLinkEmail: { limit: 3, windowSeconds: 900 },
+            verifyIp: { limit: 1, windowSeconds: 600 },
+            refreshIp: { limit: 60, windowSeconds: 900 },
+          },
+        },
+      });
+      for (const token of ['basura', 'basura', 'x', '']) {
+        const res = await verify(token).expect(400);
+        expect(res.body).toMatchObject({ code: 'INVALID_TOKEN' });
+      }
+      // The only budget unit is still there: a well-formed unknown token is
+      // answered 400 (not 429), and only then is the budget spent.
+      await verify('N'.repeat(43)).expect(400);
+      await verify('M'.repeat(43)).expect(429);
     });
   });
 
@@ -317,6 +368,7 @@ describe('POST /api/auth/verify', () => {
         statusCode: 503,
         error: 'Service Unavailable',
         message: 'Service temporarily unavailable',
+        code: 'SERVICE_UNAVAILABLE',
       });
       expect(t.users.all()).toHaveLength(0);
     });

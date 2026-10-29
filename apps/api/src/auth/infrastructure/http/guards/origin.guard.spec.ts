@@ -1,4 +1,5 @@
-import { ForbiddenException, type ExecutionContext } from '@nestjs/common';
+import type { ExecutionContext } from '@nestjs/common';
+import { OriginNotAllowed } from '../../../../shared/domain/errors';
 import { testConfig } from '../../../../../test/support/test-config';
 import { OriginGuard } from './origin.guard';
 
@@ -22,7 +23,7 @@ describe('OriginGuard', () => {
     '%s without Origin is forbidden',
     (method) => {
       expect(() => guard().canActivate(contextFor(method))).toThrow(
-        ForbiddenException,
+        OriginNotAllowed,
       );
     },
   );
@@ -32,7 +33,7 @@ describe('OriginGuard', () => {
       guard().canActivate(
         contextFor('POST', { origin: 'https://evil.example.test' }),
       ),
-    ).toThrow(ForbiddenException);
+    ).toThrow(OriginNotAllowed);
   });
 
   it.each([
@@ -44,7 +45,7 @@ describe('OriginGuard', () => {
     '',
   ])('requires an exact match: %j is rejected', (origin) => {
     expect(() => guard().canActivate(contextFor('POST', { origin }))).toThrow(
-      ForbiddenException,
+      OriginNotAllowed,
     );
   });
 
@@ -70,6 +71,6 @@ describe('OriginGuard', () => {
       guard([]).canActivate(
         contextFor('POST', { origin: 'https://app.example.test' }),
       ),
-    ).toThrow(ForbiddenException);
+    ).toThrow(OriginNotAllowed);
   });
 });

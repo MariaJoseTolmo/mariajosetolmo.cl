@@ -129,6 +129,7 @@ describe('GET /api/v1/cv with the configured signer (e2e)', () => {
         statusCode: 503,
         error: 'Service Unavailable',
         message: 'Service temporarily unavailable',
+        code: 'SERVICE_UNAVAILABLE',
       });
     } finally {
       await t.close();

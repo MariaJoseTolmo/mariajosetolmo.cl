@@ -1,10 +1,10 @@
 import {
   type CanActivate,
   type ExecutionContext,
-  ForbiddenException,
   Inject,
   Injectable,
 } from '@nestjs/common';
+import { OriginNotAllowed } from '../../../../shared/domain/errors';
 import { APP_CONFIG, type AppConfig } from '../../../../config/app-config';
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -28,6 +28,6 @@ export class OriginGuard implements CanActivate {
     if (!MUTATING_METHODS.has(req.method)) return true;
     const origin = req.headers['origin'];
     if (typeof origin === 'string' && this.allowed.has(origin)) return true;
-    throw new ForbiddenException('Origin not allowed');
+    throw new OriginNotAllowed();
   }
 }
