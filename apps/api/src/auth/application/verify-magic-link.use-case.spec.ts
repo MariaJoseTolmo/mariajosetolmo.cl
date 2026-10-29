@@ -11,7 +11,7 @@ import { SequenceRandomSource } from '../../../test/support/fakes/sequence-rando
 import { Email } from '../../identity/domain/email';
 import {
   InfrastructureUnavailable,
-  InvalidInput,
+  InvalidToken,
   RateLimited,
 } from '../../shared/domain/errors';
 import { sha256Hex } from '../../shared/domain/hash';
@@ -270,7 +270,7 @@ describe('VerifyMagicLink', () => {
       const t = setup();
       const failure = await verify(t, token).catch((e: unknown) => e);
       expect(failure).toBeInstanceOf(MalformedToken);
-      expect(failure).toBeInstanceOf(InvalidInput);
+      expect(failure).toBeInstanceOf(InvalidToken);
     });
 
     it('lets exactly one of two simultaneous verifications win', async () => {

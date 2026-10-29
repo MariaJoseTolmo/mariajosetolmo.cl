@@ -1,6 +1,6 @@
 import { isIP } from 'node:net';
 import type { ClientIpSource } from '../../../config/app-config';
-import { Forbidden } from '../../../shared/domain/errors';
+import { CdnRequired } from '../../../shared/domain/errors';
 
 /** The slice of an HTTP request the resolvers need (Express provides it). */
 export interface IpRequest {
@@ -43,8 +43,8 @@ export class CloudFrontViewerAddressResolver implements ClientIpResolver {
     return address;
   }
 
-  private denied(): Forbidden {
-    return new Forbidden('Request did not come through the CDN');
+  private denied(): CdnRequired {
+    return new CdnRequired();
   }
 }
 

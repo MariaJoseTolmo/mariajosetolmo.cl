@@ -3,9 +3,9 @@ import {
   type ExecutionContext,
   Inject,
   Injectable,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { Unauthenticated } from '../../../../shared/domain/errors';
 import { APP_CONFIG, type AppConfig } from '../../../../config/app-config';
 import {
   CLOCK,
@@ -50,7 +50,7 @@ export class JwtAuthGuard implements CanActivate {
     const principal = jwt
       ? await this.verifier.verify(jwt, this.clock.now())
       : null;
-    if (!principal) throw new UnauthorizedException();
+    if (!principal) throw new Unauthenticated();
     req.principal = principal;
     return true;
   }

@@ -34,7 +34,10 @@ describe('admin and error surface (e2e)', () => {
         .set('Cookie', cookie)
         .expect(403);
       expect(res.headers['content-type']).toMatch(JSON_TYPE);
-      expect(res.body).toMatchObject({ statusCode: 403 });
+      expect(res.body).toMatchObject({
+        statusCode: 403,
+        code: 'ROLE_NOT_ALLOWED',
+      });
     });
 
     it('answers 200 with an empty list for an ADMIN', async () => {

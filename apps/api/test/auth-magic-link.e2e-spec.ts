@@ -52,6 +52,122 @@ describe('POST /api/auth/magic-link', () => {
       });
     });
 
+    describe('no answer depends on whether the email exists', () => {
+      const KNOWN = 'known@example.test';
+      const FRESH = 'new@example.test';
+      const seed = (): void =>
+        t.users.seed({
+          id: 'u-1',
+          email: Email.parse(KNOWN),
+          role: 'RECRUITER',
+          company: null,
+          name: null,
+        });
+      const reopen = async (
+        options: Parameters<typeof createTestApp>[0] = {},
+      ): Promise<void> => {
+        await t.close();
+        t = await createTestApp({
+          ...options,
+          config: { clientIpSource: 'cloudfront', ...options.config },
+        });
+        seed();
+      };
+      const shape = (res: request.Response): string =>
+        JSON.stringify({ status: res.status, body: res.text });
+
+      it('answers a registered, a new and an email-limited address with the same 202 and no code', async () => {
+        await reopen({
+          config: {
+            rateLimits: {
+              magicLinkIp: { limit: 50, windowSeconds: 900 },
+              magicLinkEmail: { limit: 1, windowSeconds: 900 },
+              verifyIp: { limit: 20, windowSeconds: 900 },
+              refreshIp: { limit: 60, windowSeconds: 900 },
+            },
+          },
+        });
+        const known = await post({ email: KNOWN });
+        const fresh = await post({ email: FRESH });
+        const knownLimited = await post({ email: KNOWN });
+        const freshLimited = await post({ email: FRESH });
+        const all = [known, fresh, knownLimited, freshLimited];
+        expect(all.map((r) => r.status)).toEqual([202, 202, 202, 202]);
+        expect(new Set(all.map(shape)).size).toBe(1);
+        for (const res of all) {
+          expect(res.body).not.toHaveProperty('code');
+        }
+      });
+
+      it.each([
+        ['a foreign Origin', 403, 'ORIGIN_NOT_ALLOWED'],
+        ['no viewer address', 403, 'CDN_REQUIRED'],
+      ])(
+        '%s fails the same way for both addresses',
+        async (label, status, code) => {
+          await reopen();
+          const ask = (email: string): request.Test => {
+            const req = request(t.server()).post(ROUTE);
+            if (label === 'a foreign Origin') {
+              req
+                .set('Origin', 'https://evil.example.test')
+                .set(VIEWER, '203.0.113.10:50000');
+            } else {
+              req.set('Origin', TEST_ORIGIN);
+            }
+            return req.send({ email });
+          };
+          const known = await ask(KNOWN);
+          const fresh = await ask(FRESH);
+          expect(known.status).toBe(status);
+          expect(known.body).toMatchObject({ code });
+          expect(shape(fresh)).toBe(shape(known));
+        },
+      );
+
+      it('answers the same per-IP 429 for both addresses', async () => {
+        await reopen({
+          config: {
+            rateLimits: {
+              magicLinkIp: { limit: 1, windowSeconds: 900 },
+              magicLinkEmail: { limit: 5, windowSeconds: 900 },
+              verifyIp: { limit: 20, windowSeconds: 900 },
+              refreshIp: { limit: 60, windowSeconds: 900 },
+            },
+          },
+        });
+        await post({ email: 'warmup@example.test' }).expect(202);
+        const known = await post({ email: KNOWN });
+        const fresh = await post({ email: FRESH });
+        expect(known.status).toBe(429);
+        expect(known.body).toMatchObject({ code: 'RATE_LIMITED' });
+        expect(shape(fresh)).toBe(shape(known));
+        expect(fresh.headers['retry-after']).toBe(known.headers['retry-after']);
+      });
+
+      it('answers the same 503 for both addresses when the store is down', async () => {
+        await reopen({
+          limiter: {
+            hit: () => Promise.reject(new InfrastructureUnavailable()),
+          },
+        });
+        const known = await post({ email: KNOWN });
+        const fresh = await post({ email: FRESH });
+        expect(known.status).toBe(503);
+        expect(known.body).toMatchObject({ code: 'SERVICE_UNAVAILABLE' });
+        expect(shape(fresh)).toBe(shape(known));
+      });
+
+      it('answers the same 400 for a malformed address, whatever else is registered', async () => {
+        await reopen();
+        const first = await post({ email: 'no-es-correo' });
+        const second = await post({ email: 'tambien-no' });
+        expect(first.status).toBe(400);
+        expect(first.body).toMatchObject({ code: 'INVALID_INPUT' });
+        expect(shape(second)).toBe(shape(first));
+      });
+    });
+
     describe('invalid input', () => {
       it.each([
         ['an address that is not one', { email: 'no-es-correo' }],
@@ -73,7 +189,10 @@ describe('POST /api/auth/magic-link', () => {
       ])('%s: 400 JSON and nothing is sent', async (_label, body) => {
         const res = await post(body).expect(400);
         expect(res.headers['content-type']).toMatch(/application\/json/);
-        expect(res.body).toMatchObject({ statusCode: 400 });
+        expect(res.body).toMatchObject({
+          statusCode: 400,
+          code: 'INVALID_INPUT',
+        });
         expect(t.mail.sent).toHaveLength(0);
       });
 
@@ -150,7 +269,10 @@ describe('POST /api/auth/magic-link', () => {
             .set('Origin', TEST_ORIGIN);
           if (header !== undefined) req.set(VIEWER, header);
           const res = await req.send({ email: 'a@example.test' }).expect(403);
-          expect(res.body).toMatchObject({ statusCode: 403 });
+          expect(res.body).toMatchObject({
+            statusCode: 403,
+            code: 'CDN_REQUIRED',
+          });
           expect(t.mail.sent).toHaveLength(0);
         },
       );
@@ -186,7 +308,10 @@ describe('POST /api/auth/magic-link', () => {
         t.clock.advanceSeconds(100);
         const res = await post({ email: 'u4@example.test' }).expect(429);
         expect(res.headers['retry-after']).toBe('800');
-        expect(res.body).toMatchObject({ statusCode: 429 });
+        expect(res.body).toMatchObject({
+          statusCode: 429,
+          code: 'RATE_LIMITED',
+        });
         expect(t.mail.sent).toHaveLength(3);
       });
 
@@ -282,6 +407,7 @@ describe('POST /api/auth/magic-link', () => {
         statusCode: 503,
         error: 'Service Unavailable',
         message: 'Service temporarily unavailable',
+        code: 'SERVICE_UNAVAILABLE',
       });
       expect(JSON.stringify(res.body)).not.toContain('10.0.0.5');
       expect(t.mail.sent).toHaveLength(0);

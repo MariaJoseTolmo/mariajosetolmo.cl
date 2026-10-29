@@ -100,6 +100,7 @@ describe('content endpoints (e2e)', () => {
           statusCode: 400,
           error: 'Bad Request',
           message: 'level is not a known skill level',
+          code: 'INVALID_INPUT',
         });
       },
     );
@@ -203,7 +204,15 @@ describe('content endpoints (e2e)', () => {
         message: qs.startsWith('limit')
           ? 'limit must be an integer between 1 and 50'
           : 'cursor must be a non-negative integer',
+        code: 'INVALID_INPUT',
       });
+      expect(Object.keys(res.body as object).sort()).toEqual([
+        'code',
+        'error',
+        'message',
+        'statusCode',
+      ]);
+      expect(res.text).not.toMatch(/<script>|9007199254740993/);
     });
   });
 

@@ -119,6 +119,7 @@ describe('Postgres unreachable at boot', () => {
       statusCode: 503,
       error: 'Service Unavailable',
       message: 'Service temporarily unavailable',
+      code: 'SERVICE_UNAVAILABLE',
     });
     expect(JSON.stringify(down.body)).not.toContain('10.0.0.9');
     expect(down.headers['set-cookie']).toBeUndefined();
@@ -187,6 +188,7 @@ describe('Postgres unreachable at boot', () => {
         statusCode: 503,
         error: 'Service Unavailable',
         message: 'Service temporarily unavailable',
+        code: 'SERVICE_UNAVAILABLE',
       });
     });
   });
@@ -205,6 +207,7 @@ describe('Postgres unreachable at boot', () => {
         statusCode: 503,
         error: 'Service Unavailable',
         message: 'Service temporarily unavailable',
+        code: 'SERVICE_UNAVAILABLE',
       });
       const raw = JSON.stringify(res.body);
       expect(raw).not.toMatch(/10\.0\.0\.9|ECONNREFUSED|SELECT|stack/);
@@ -232,6 +235,7 @@ describe('Postgres unreachable at boot', () => {
       statusCode: 503,
       error: 'Service Unavailable',
       message: 'Service temporarily unavailable',
+      code: 'SERVICE_UNAVAILABLE',
     });
   });
 });

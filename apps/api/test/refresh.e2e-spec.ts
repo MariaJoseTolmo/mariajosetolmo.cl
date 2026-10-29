@@ -169,6 +169,7 @@ describe('POST /api/auth/refresh and /api/auth/logout', () => {
         statusCode: 401,
         error: 'Unauthorized',
         message: 'Authentication required',
+        code: 'UNAUTHENTICATED',
       });
       expect(cookiesOf(res)).toEqual(CLEARED);
     });
@@ -186,6 +187,27 @@ describe('POST /api/auth/refresh and /api/auth/logout', () => {
       t.clock.advanceSeconds(7 * DAY);
       const res = await refresh(session.refresh).expect(401);
       expect(cookiesOf(res)).toEqual(CLEARED);
+    });
+
+    it('answers 401 UNAUTHENTICATED for every cause: no cookie, unknown, expired, revoked', async () => {
+      const expired = await signIn('old@example.test');
+      t.clock.advanceSeconds(7 * DAY);
+      const revoked = await signIn('revoked@example.test');
+      await refresh(revoked.refresh).expect(204);
+      t.clock.advanceSeconds(11);
+      const answers = [
+        await refresh(),
+        await refresh('Z'.repeat(43)),
+        await refresh(expired.refresh),
+        await refresh(revoked.refresh),
+      ];
+      for (const res of answers) {
+        expect(res.status).toBe(401);
+        expect(res.body).toMatchObject({
+          statusCode: 401,
+          code: 'UNAUTHENTICATED',
+        });
+      }
     });
 
     it('one second before the 7 days it still refreshes', async () => {
@@ -316,6 +338,7 @@ describe('POST /api/auth/refresh and /api/auth/logout', () => {
         statusCode: 503,
         error: 'Service Unavailable',
         message: 'Service temporarily unavailable',
+        code: 'SERVICE_UNAVAILABLE',
       });
       expect(res.headers['set-cookie']).toBeUndefined();
     });

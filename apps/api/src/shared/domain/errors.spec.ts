@@ -1,7 +1,10 @@
 import {
+  CdnRequired,
   DomainError,
-  Forbidden,
   InfrastructureUnavailable,
+  InvalidToken,
+  OriginNotAllowed,
+  RoleNotAllowed,
   RateLimited,
   InvalidInput,
   Unauthenticated,
@@ -31,12 +34,28 @@ describe('domain errors', () => {
     expect(new InfrastructureUnavailable().cause).toBeUndefined();
   });
 
-  it('Forbidden is a DomainError with its own code', () => {
-    const error = new Forbidden('request did not come through CloudFront');
+  it.each([
+    [new InvalidToken('token is invalid'), 'INVALID_TOKEN'],
+    [new CdnRequired(), 'CDN_REQUIRED'],
+    [new OriginNotAllowed(), 'ORIGIN_NOT_ALLOWED'],
+    [new RoleNotAllowed(), 'ROLE_NOT_ALLOWED'],
+  ])('%p is a DomainError with its own code %s', (error, code) => {
     expect(error).toBeInstanceOf(DomainError);
-    expect(error.code).toBe('FORBIDDEN');
-    expect(error.name).toBe('Forbidden');
-    expect(error.message).toBe('request did not come through CloudFront');
+    expect(error.code).toBe(code);
+    expect(error.name).toBe(error.constructor.name);
+  });
+
+  it('keeps fixed generic messages on the 403 errors', () => {
+    expect(new CdnRequired().message).toBe(
+      'Request did not come through the CDN',
+    );
+    expect(new OriginNotAllowed().message).toBe('Origin not allowed');
+    expect(new RoleNotAllowed().message).toBe('Role not allowed');
+  });
+
+  it('no longer exports the generic Forbidden error', async () => {
+    const mod: Record<string, unknown> = await import('./errors');
+    expect(mod['Forbidden']).toBeUndefined();
   });
 
   it('Unauthenticated is a DomainError with its own code', () => {
