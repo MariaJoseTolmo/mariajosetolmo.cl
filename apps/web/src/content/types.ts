@@ -135,6 +135,11 @@ export interface LoginContent {
     emailEmpty: string;
     emailInvalid: string;
     networkError: string;
+    /** Submit button text after a `server` or `network` failure. */
+    retryLabel: string;
+    /** Login-specific overrides of the API error dictionary. */
+    invalidInputError: string;
+    serverError: string;
   };
   sent: {
     eyebrow: string;

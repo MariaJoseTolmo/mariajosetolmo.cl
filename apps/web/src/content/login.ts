@@ -19,6 +19,11 @@ export const login: LoginContent = {
     emailInvalid: 'Revisa el correo: debe tener el formato nombre@empresa.com.',
     networkError:
       'No pudimos enviar el enlace. Revisa tu conexión e inténtalo de nuevo.',
+    retryLabel: 'Reintentar',
+    invalidInputError:
+      'Revisa los datos. El correo debe tener el formato nombre@empresa.com.',
+    serverError:
+      'Algo falló de nuestro lado y el enlace no se envió. Inténtalo de nuevo.',
   },
   sent: {
     eyebrow: '202 Accepted',

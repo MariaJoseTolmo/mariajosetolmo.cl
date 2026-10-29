@@ -96,11 +96,11 @@ Un solo hilo de escritura. Compatibilidad entre PRs: los PRs web (U1a en adelant
 
 ## U2 — Login completo (web, PR 2)
 
-- [ ] 5.1 RED `src/features/login/*.test.tsx` (gateway fake inyectado): `LoginState.error` = `{status:'error'; failure}`; "enviado" solo con `result.ok`; 400, 403, 429, 503 y `network` en cinco envíos -> sin estado "sent", cinco textos distintos, cada uno con `role="alert"`, el foco no se mueve; dos correos con el mismo fallo dan el mismo DOM -> GREEN reducer `FAILED` con `failure`, contenedor con `apiErrorMessage` y overrides de login (design §5).
-- [ ] 5.2 RED `LoginForm`: recibe `errorMessage?: string` (reemplaza a `networkError`); para `server` y `network` el único botón de envío dice "Reintentar" y no hay segundo botón; en los demás errores el botón conserva su texto -> GREEN `retryLabel` en `content/login.ts` + `LoginForm`.
-- [ ] 5.3 RED con timers falsos: `requestMagicLink` con 503 se invoca exactamente una vez tras avanzar el tiempo; 429 con `Retry-After: 60` muestra tiempo estimado y el texto no cambia al avanzar el reloj -> GREEN (sin lógica de reintento).
-- [ ] 5.4 RED anti-enumeración web: gateway con el mismo estado y dos correos (registrado y desconocido) -> mismo `failure` y mismo HTML; el estado "sent" idéntico para dos cuerpos 2xx distintos; `jest-axe` 0 violaciones; el DOM no contiene el `message` de la API ni "CloudFront" -> GREEN.
-- [ ] 5.5 Actualizar la spec modificada `web-recruiter-access` (solo verify la compara). REFACTOR. CIERRE.
+- [x] 5.1 RED `src/features/login/*.test.tsx` (gateway fake inyectado): `LoginState.error` = `{status:'error'; failure}`; "enviado" solo con `result.ok`; 400, 403, 429, 503 y `network` en cinco envíos -> sin estado "sent", cinco textos distintos, cada uno con `role="alert"`, el foco no se mueve; dos correos con el mismo fallo dan el mismo DOM -> GREEN reducer `FAILED` con `failure`, contenedor con `apiErrorMessage` y overrides de login (design §5).
+- [x] 5.2 RED `LoginForm`: recibe `errorMessage?: string` (reemplaza a `networkError`); para `server` y `network` el único botón de envío dice "Reintentar" y no hay segundo botón; en los demás errores el botón conserva su texto -> GREEN `retryLabel` en `content/login.ts` + `LoginForm`.
+- [x] 5.3 RED con timers falsos: `requestMagicLink` con 503 se invoca exactamente una vez tras avanzar el tiempo; 429 con `Retry-After: 60` muestra tiempo estimado y el texto no cambia al avanzar el reloj -> GREEN (sin lógica de reintento).
+- [x] 5.4 RED anti-enumeración web: gateway con el mismo estado y dos correos (registrado y desconocido) -> mismo `failure` y mismo HTML; el estado "sent" idéntico para dos cuerpos 2xx distintos; `jest-axe` 0 violaciones; el DOM no contiene el `message` de la API ni "CloudFront" -> GREEN.
+- [x] 5.5 Actualizar la spec modificada `web-recruiter-access` (solo verify la compara). REFACTOR. CIERRE.
 
 ## U3a — Verify y zona `getMe` (web, PR 3a)
 

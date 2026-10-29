@@ -16,8 +16,10 @@ import { validateEmail } from './validateEmail';
 interface LoginFormProps {
   onSubmit: (request: MagicLinkRequest) => void;
   submitting?: boolean;
-  /** The only failure surfaced to the user (anti-enumeration). */
-  networkError?: boolean;
+  /** Copy of the failure to show (from `apiErrorMessage`); never the raw API message. */
+  errorMessage?: string;
+  /** The single submit button reads "Reintentar" (server and network failures). */
+  retry?: boolean;
   /** Focus the email field on mount (after "Usar otro correo"). */
   autoFocusEmail?: boolean;
 }
@@ -36,7 +38,8 @@ function buildRequest(
 export function LoginForm({
   onSubmit,
   submitting = false,
-  networkError = false,
+  errorMessage,
+  retry = false,
   autoFocusEmail = false,
 }: LoginFormProps) {
   const copy = login.form;
@@ -136,13 +139,17 @@ export function LoginForm({
           value={name}
           onChange={(event) => setName(event.target.value)}
         />
-        {networkError ? (
+        {errorMessage && !emailError ? (
           <p className={styles.networkError} role="alert">
-            {copy.networkError}
+            {errorMessage}
           </p>
         ) : null}
         <Button type="submit" size={52} disabled={submitting}>
-          {submitting ? copy.submitting : copy.submit}
+          {submitting
+            ? copy.submitting
+            : retry && !emailError
+              ? copy.retryLabel
+              : copy.submit}
         </Button>
         <p className={styles.privacy}>{copy.privacy}</p>
       </form>
