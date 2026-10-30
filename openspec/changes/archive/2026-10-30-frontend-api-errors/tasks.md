@@ -48,15 +48,15 @@ Un solo hilo de escritura. Compatibilidad entre PRs: los PRs web (U1a en adelant
 ## Preguntas abiertas y puntos de decisión
 
 - [x] D-A. RESUELTO en apply (PR A): sí llegan al filtro global con `@Catch()`. No hace falta plan B. Matiz: body-parser lanza un `Error` plano con `statusCode`/`status` (forma http-errors), no un `HttpException`; el filtro traduce ambos por status. Si no, aplicar plan B (middleware de error de Express en `configureApp`, tarea 1.2). Solo detener y preguntar si el plan B también falla.
-- [ ] D-B. Ajustes de spec ya resueltos por el design (sin acción de apply, verify los comprueba): `INVALID_TOKEN` en `api-error-contract`; campo `error` (no `kind`) y `status` opcional en `web-api-errors`; sin `code` no hay `reason`.
+- [x] D-B. Ajustes de spec ya resueltos por el design (sin acción de apply, verify los comprueba): `INVALID_TOKEN` en `api-error-contract`; campo `error` (no `kind`) y `status` opcional en `web-api-errors`; sin `code` no hay `reason`. **Evidencia:** verificado en `verify-report.md` (sección «Veredicto», D-B comprobado); las specs delta coinciden con el design.
 - [x] D-C. VERIFICADO en la tarea 2.4: `MalformedToken` se lanza antes del límite por IP; un token mal formado no gasta el cupo y responde el mismo `INVALID_TOKEN`.
 - [x] D-D. Supuesto de CI: añadir `kind` `invalid-input` (U1a) no rompe `Record<ApiErrorKind, …>` existentes; si hay mapas exhaustivos en la web, se completan en el mismo PR para no dejar `typecheck` en rojo (tarea 5.5). RESUELTO en PR B: no había mapas exhaustivos en pantallas; `typecheck` queda en verde sin tocarlas.
 
 ## Cierre estándar de PR («CIERRE»)
 
-- [ ] C1. Contar líneas (`additions + deletions`, sin lockfile); si excede 400 y no hay `size:exception` aprobado, STOP. Evidencia: verify-report registra el `size:exception`.
-- [ ] C2. En la raíz: `npm run lint && npm run typecheck && npm test && npm run test:e2e && npm run build` en verde. En PRs de API además `npm run lint:boundaries -w apps/api` y `npm run test:cov -w apps/api`; en PRs web, `npm run format:check`. Evidencia: verify-report. CI (quality, secrets, integration) verde.
-- [ ] C3. Cobertura >= 80 %; gitleaks sin hallazgos; revisión de contexto fresco antes de abrir el PR; nada de `message` ni "CloudFront" en la UI.
+- [x] C1. Contar líneas (`additions + deletions`, sin lockfile); si excede 400 y no hay `size:exception` aprobado, STOP. **Evidencia:** `size:exception` aprobado por la usuaria (opción c, 4 PRs, `stacked-to-main`); medido en `verify-report.md` (sección «Veredicto»): PR A ~1.320, PR C ~373, PR D ~920. PR B documentado como cubierto.
+- [x] C2. En la raíz: `npm run lint && npm run typecheck && npm test && npm run test:e2e && npm run build` en verde. En PRs de API además `npm run lint:boundaries -w apps/api` y `npm run test:cov -w apps/api`; en PRs web, `npm run format:check`. **Evidencia:** tabla «Ejecución» de `verify-report.md` (todos los comandos con exit 0).
+- [x] C3. Cobertura >= 80 %; gitleaks sin hallazgos; revisión de contexto fresco antes de abrir el PR; nada de `message` ni "CloudFront" en la UI. **Evidencia:** cobertura y gitleaks en `verify-report.md`; revisión de contexto fresco por PR (PRs #48, #49, #50 y #51).
 
 ## U0a — Dominio, catálogo, filtro y guards (API, PR 0a)
 
@@ -117,9 +117,9 @@ Un solo hilo de escritura. Compatibilidad entre PRs: los PRs web (U1a en adelant
 
 ## Cierre del cambio (después de la última unidad)
 
-- [ ] F1. Revisión de contexto fresco de todo el diff (incluye cruce con las 4 specs y los ajustes D-B).
-- [ ] F2. `gitleaks` sin hallazgos; `rg` de ARNs, IDs de cuenta y emails reales en `openspec/changes/frontend-api-errors` y en el código nuevo.
-- [ ] F3. `sdd-verify`: todos los escenarios de la trazabilidad en verde; `size:exception` registrados.
+- [x] F1. Revisión de contexto fresco de todo el diff (incluye cruce con las 4 specs y los ajustes D-B). **Evidencia:** realizada por PR en lugar de una única revisión del diff completo: una revisión de contexto fresco por cada PR (#48, #49, #50 y #51), con hallazgos corregidos con TDD salvo W1 y W2 del PR A, aceptados por la usuaria (ver `verify-report.md`, sección «Issues»).
+- [x] F2. `gitleaks` sin hallazgos; `rg` de ARNs, IDs de cuenta y emails reales en `openspec/changes/frontend-api-errors` y en el código nuevo. **Evidencia:** `verify-report.md`, sección «Ejecución»: `gitleaks detect` sin hallazgos y `rg` sin hallazgos.
+- [x] F3. `sdd-verify`: todos los escenarios de la trazabilidad en verde; `size:exception` registrados. **Evidencia:** `sdd-verify` PASS WITH WARNINGS, 0 CRITICAL, 68/68 escenarios COMPLIANT (`verify-report.md`).
 
 ## Trazabilidad escenario -> tarea
 
