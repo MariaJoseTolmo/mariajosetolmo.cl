@@ -6,10 +6,11 @@ import { InfoCard } from './InfoCard';
 interface CvCardProps {
   onDownload: () => void;
   busy: boolean;
-  failed: boolean;
+  /** Ready-made message of the last failure, or `null` when there is none. */
+  error: string | null;
 }
 
-export function CvCard({ onDownload, busy, failed }: CvCardProps) {
+export function CvCard({ onDownload, busy, error }: CvCardProps) {
   const copy = recruiter.cv;
   return (
     <InfoCard id="cv" title={copy.title}>
@@ -26,9 +27,9 @@ export function CvCard({ onDownload, busy, failed }: CvCardProps) {
         <p role="status" className={styles.status}>
           {busy ? copy.preparing : ''}
         </p>
-        {failed ? (
+        {error ? (
           <p role="alert" className={styles.failed}>
-            {copy.failed}
+            {error}
           </p>
         ) : null}
       </div>

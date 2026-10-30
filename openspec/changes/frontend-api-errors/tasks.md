@@ -104,16 +104,16 @@ Un solo hilo de escritura. Compatibilidad entre PRs: los PRs web (U1a en adelant
 
 ## U3a — Verify y zona `getMe` (web, PR 3a)
 
-- [ ] 6.1 RED `src/features/login/verify*.test.tsx` (ubicación según `rg "ErrorVariant" apps/web/src`): `verifyToken` 403 `ORIGIN_NOT_ALLOWED` -> variante `blocked` con eyebrow "403 Forbidden", texto de sitio oficial y "Reintentar", sin "Este enlace no es válido"; `INVALID_TOKEN` para inexistente, vencido, usado y mal formado -> HTML idéntico en los cuatro y "Pedir un nuevo enlace"; `invalid-input` y `unauthorized` -> `invalid`; 429 con `{wait}` y "Reintentar"; 503, `network`, `server`, `unexpected` -> `unavailable` con "Reintentar"; el foco va al título -> GREEN `ErrorVariant` con `blocked` y `retryAfterSeconds`, mapeo del design §6 y `content/verify.ts`.
-- [ ] 6.2 RED `src/features/recruiter/**` (guard de sesión): `getMe` con 403, 429, 503 y `network` en cuatro renders -> cuatro textos distintos, sin redirección y con "Reintentar" (una sola nueva llamada al pulsarlo); `unauthorized` redirige a `/acceso/`; refresh bloqueado (`forbidden` + `CDN_REQUIRED`) muestra copy de sitio oficial sin redirigir; el texto lleva `role="status"` y el foco va al título; "Verificando sesión" sin tarjetas -> GREEN `SessionState.error` con `failure` y `apiErrorMessage`.
-- [ ] 6.3 RED `jest-axe` 0 violaciones en verify y zona en error; el DOM no contiene el `message` ni "CloudFront" -> GREEN. REFACTOR. CIERRE.
+- [x] 6.1 RED `src/features/login/verify*.test.tsx` (ubicación según `rg "ErrorVariant" apps/web/src`): `verifyToken` 403 `ORIGIN_NOT_ALLOWED` -> variante `blocked` con eyebrow "403 Forbidden", texto de sitio oficial y "Reintentar", sin "Este enlace no es válido"; `INVALID_TOKEN` para inexistente, vencido, usado y mal formado -> HTML idéntico en los cuatro y "Pedir un nuevo enlace"; `invalid-input` y `unauthorized` -> `invalid`; 429 con `{wait}` y "Reintentar"; 503, `network`, `server`, `unexpected` -> `unavailable` con "Reintentar"; el foco va al título -> GREEN `ErrorVariant` con `blocked` y `retryAfterSeconds`, mapeo del design §6 y `content/verify.ts`.
+- [x] 6.2 RED `src/features/recruiter/**` (guard de sesión): `getMe` con 403, 429, 503 y `network` en cuatro renders -> cuatro textos distintos, sin redirección y con "Reintentar" (una sola nueva llamada al pulsarlo); `unauthorized` redirige a `/acceso/`; refresh bloqueado (`forbidden` + `CDN_REQUIRED`) muestra copy de sitio oficial sin redirigir; el texto lleva `role="status"` y el foco va al título; "Verificando sesión" sin tarjetas -> GREEN `SessionState.error` con `failure` y `apiErrorMessage`.
+- [x] 6.3 RED `jest-axe` 0 violaciones en verify y zona en error; el DOM no contiene el `message` ni "CloudFront" -> GREEN. REFACTOR. CIERRE.
 
 ## U3b — CV, logout y playground (web, PR 3b)
 
-- [ ] 7.1 RED `CvCard`/contenedor: `getCvLink` 503 al pulsar "Descargar PDF" -> copy de servicio no disponible (no el genérico de conexión); `unexpected` usa el override `failed` actual; `CvCard` recibe `error: string | null` con `role="alert"`; `CvStatus` guarda `ApiFailure | null` -> GREEN.
-- [ ] 7.2 RED `logoutFailed` guarda `ApiFailure | null`: `logout` 429 -> copy de espera con `{wait}` y `role="alert"` -> GREEN.
-- [ ] 7.3 RED playground: `/api/v1/admin/visits` como RECRUITER -> status 403 y cuerpo crudo visibles, más una `<p>` bajo `CodeWindow` con "Respuesta esperada: este endpoint es solo para el rol ADMIN."; `/api/v1/profile` 200 -> sin línea; 5xx -> línea del diccionario; cinco botones con `aria-pressed` y exactamente uno `true` -> GREEN `response.failure` + `apiErrorMessage` con override `ROLE_NOT_ALLOWED`.
-- [ ] 7.4 RED `jest-axe` 0 violaciones; el DOM no contiene `message` ni "CloudFront" -> GREEN. REFACTOR. CIERRE.
+- [x] 7.1 RED `CvCard`/contenedor: `getCvLink` 503 al pulsar "Descargar PDF" -> copy de servicio no disponible (no el genérico de conexión); `unexpected` usa el override `failed` actual; `CvCard` recibe `error: string | null` con `role="alert"`; `CvStatus` guarda `ApiFailure | null` -> GREEN.
+- [x] 7.2 RED `logoutFailed` guarda `ApiFailure | null`: `logout` 429 -> copy de espera con `{wait}` y `role="alert"` -> GREEN.
+- [x] 7.3 RED playground: `/api/v1/admin/visits` como RECRUITER -> status 403 y cuerpo crudo visibles, más una `<p>` bajo `CodeWindow` con "Respuesta esperada: este endpoint es solo para el rol ADMIN."; `/api/v1/profile` 200 -> sin línea; 5xx -> línea del diccionario; cinco botones con `aria-pressed` y exactamente uno `true` -> GREEN `response.failure` + `apiErrorMessage` con override `ROLE_NOT_ALLOWED`.
+- [x] 7.4 RED `jest-axe` 0 violaciones; el DOM no contiene `message` ni "CloudFront" -> GREEN. REFACTOR. CIERRE.
 
 ## Cierre del cambio (después de la última unidad)
 

@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ApiGateway } from '@/lib/api/port';
-import type { ApiResult, Me } from '@/lib/api/types';
+import type { ApiFailure, ApiResult, Me } from '@/lib/api/types';
 import { useRecruiterSession } from './useRecruiterSession';
 
 const ME: Me = {
@@ -48,13 +48,23 @@ describe('useRecruiterSession', () => {
     );
   });
 
-  it.each(['network', 'server', 'unexpected'] as const)(
-    'reports a %s problem as an error, never as a redirect',
-    async (kind) => {
-      const loader = loaderFor(answer({ ok: false, error: kind }));
+  it.each<ApiFailure>([
+    { error: 'network' },
+    { error: 'server', status: 503, reason: 'SERVICE_UNAVAILABLE' },
+    { error: 'unexpected', status: 418 },
+    { error: 'forbidden', status: 403, reason: 'CDN_REQUIRED' },
+    { error: 'rate-limited', status: 429, retryAfterSeconds: 60 },
+  ])(
+    'keeps the whole failure of a %o as an error, never as a redirect',
+    async (failure) => {
+      const loader = loaderFor(answer({ ok: false, ...failure }));
       const { result } = renderHook(() => useRecruiterSession(loader));
+      const sameFailure: unknown = expect.objectContaining(failure);
       await waitFor(() =>
-        expect(result.current.state).toEqual({ status: 'error', kind }),
+        expect(result.current.state).toEqual({
+          status: 'error',
+          failure: sameFailure,
+        }),
       );
     },
   );
@@ -65,7 +75,7 @@ describe('useRecruiterSession', () => {
     await waitFor(() =>
       expect(result.current.state).toEqual({
         status: 'error',
-        kind: 'network',
+        failure: { error: 'network' },
       }),
     );
   });

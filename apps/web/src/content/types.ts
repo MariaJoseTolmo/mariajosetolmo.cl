@@ -160,7 +160,6 @@ export interface LoginContent {
 export interface VerifyErrorCopy {
   eyebrow: string;
   title: string;
-  text: string;
 }
 
 export interface VerifyContent {
@@ -174,7 +173,10 @@ export interface VerifyContent {
   };
   done: { eyebrow: string; title: string; lead: string; enter: string };
   errors: {
-    invalid: VerifyErrorCopy;
+    /** One text for every rejected link: expired, used and unknown look alike. */
+    invalid: VerifyErrorCopy & { text: string };
+    /** The texts of the next three come from the API error dictionary. */
+    blocked: VerifyErrorCopy;
     'rate-limited': VerifyErrorCopy;
     unavailable: VerifyErrorCopy;
   };
@@ -191,7 +193,7 @@ export interface NotFoundContent {
 
 export interface RecruiterContent {
   checking: { title: string };
-  error: { title: string; text: string; retry: string };
+  error: { title: string; retry: string };
   intro: { eyebrow: string; lead: string };
   greeting: { base: string; companyPrefix: string };
   cv: {
@@ -218,6 +220,8 @@ export interface RecruiterContent {
     loadingStatus: string;
     failed: string;
     failedStatus: string;
+    /** Explains a 403 that is the expected answer for a recruiter. */
+    roleNotAllowed: string;
   };
 }
 

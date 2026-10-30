@@ -1,6 +1,8 @@
 import { CodeWindow } from '@/components/ui/CodeWindow';
 import { recruiter } from '@/content/recruiter';
+import { apiErrorMessage } from '@/lib/apiErrorMessage';
 import type { PlaygroundEndpoint, RawResponse } from '@/lib/api/types';
+import { playgroundOverrides } from '../recruiterOverrides';
 import styles from './ResponseViewer.module.css';
 
 export type ViewState =
@@ -53,14 +55,21 @@ export function ResponseViewer({ endpoint, view }: ResponseViewerProps) {
   const { status, code, announcement } = describe(view);
   // The status line is announced instead of the JSON: a long payload read out
   // in full is noise. The region is always mounted so later text is spoken.
+  const explanation =
+    view.phase === 'done' && view.response.failure
+      ? apiErrorMessage(view.response.failure, playgroundOverrides)
+      : '';
   const spoken =
-    view.phase === 'done' ? `GET ${endpoint}: ${status}` : announcement;
+    view.phase === 'done'
+      ? [`GET ${endpoint}: ${status}`, explanation].filter(Boolean).join('. ')
+      : announcement;
   return (
     <div className={styles.viewer}>
       <p role="status" className={styles.live}>
         {spoken}
       </p>
       <CodeWindow method="GET" path={endpoint} status={status} code={code} />
+      {explanation ? <p className={styles.error}>{explanation}</p> : null}
       {view.phase === 'error' ? (
         <p className={styles.error}>{announcement}</p>
       ) : null}

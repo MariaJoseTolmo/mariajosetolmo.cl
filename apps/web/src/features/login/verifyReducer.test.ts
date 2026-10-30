@@ -19,14 +19,19 @@ describe('verifyReducer', () => {
     expect(verifyReducer(confirming, { type: 'SUCCEEDED' })).toEqual({
       status: 'done',
     });
-    expect(
-      verifyReducer(confirming, { type: 'FAILED', kind: 'invalid-token' }),
-    ).toEqual({ status: 'error', kind: 'invalid-token' });
+    const failure = { error: 'invalid-token', status: 400 } as const;
+    expect(verifyReducer(confirming, { type: 'FAILED', failure })).toEqual({
+      status: 'error',
+      failure,
+    });
   });
 
   it('allows retrying after an error but never re-confirms once done', () => {
     expect(
-      verifyReducer({ status: 'error', kind: 'network' }, { type: 'CONFIRM' }),
+      verifyReducer(
+        { status: 'error', failure: { error: 'network' } },
+        { type: 'CONFIRM' },
+      ),
     ).toEqual({ status: 'confirming' });
     const done = { status: 'done' } as const;
     expect(verifyReducer(done, { type: 'CONFIRM' })).toBe(done);
@@ -35,9 +40,9 @@ describe('verifyReducer', () => {
   it('ignores results that arrive outside confirming', () => {
     const ready = { status: 'ready' } as const;
     expect(verifyReducer(ready, { type: 'SUCCEEDED' })).toBe(ready);
-    expect(verifyReducer(ready, { type: 'FAILED', kind: 'network' })).toBe(
-      ready,
-    );
+    expect(
+      verifyReducer(ready, { type: 'FAILED', failure: { error: 'network' } }),
+    ).toBe(ready);
     const confirming = { status: 'confirming' } as const;
     expect(verifyReducer(confirming, { type: 'CONFIRM' })).toBe(confirming);
   });
@@ -64,9 +69,21 @@ describe('verifyView', () => {
       status: 'confirming',
     });
     expect(verifyView(found, { status: 'done' })).toEqual({ status: 'done' });
-    expect(verifyView(found, { status: 'error', kind: 'network' })).toEqual({
+    const failure = { error: 'network' } as const;
+    expect(verifyView(found, { status: 'error', failure })).toEqual({
       status: 'error',
       variant: 'unavailable',
+      failure,
+    });
+    const limited = {
+      error: 'rate-limited',
+      status: 429,
+      retryAfterSeconds: 120,
+    } as const;
+    expect(verifyView(found, { status: 'error', failure: limited })).toEqual({
+      status: 'error',
+      variant: 'rate-limited',
+      failure: limited,
     });
   });
 });
@@ -74,12 +91,13 @@ describe('verifyView', () => {
 describe('errorVariant', () => {
   it.each([
     ['invalid-token', 'invalid'],
-    ['unexpected', 'invalid'],
+    ['invalid-input', 'invalid'],
     ['unauthorized', 'invalid'],
-    ['forbidden', 'invalid'],
+    ['forbidden', 'blocked'],
     ['rate-limited', 'rate-limited'],
     ['network', 'unavailable'],
     ['server', 'unavailable'],
+    ['unexpected', 'unavailable'],
   ] as const)('%s -> %s', (kind, variant) => {
     expect(errorVariant(kind)).toBe(variant);
   });

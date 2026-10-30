@@ -1,6 +1,6 @@
 # Apply progress: frontend-api-errors
 
-> Lotes: 1 = PR A (U0a+U0b), hecho. 2 = PR B (U1a+U1b), hecho. 3 = PR C (U2), hecho. Pendiente: PR D (U3a+U3b).
+> Lotes: 1 = PR A (U0a+U0b), hecho. 2 = PR B (U1a+U1b), hecho. 3 = PR C (U2), hecho. 4 = PR D (U3a+U3b), hecho. Quedan solo F1–F3 (cierre del cambio).
 
 > Modo: Strict TDD. Entrega: 4 PRs con `size:exception`, `stacked-to-main` (A = U0a+U0b, B = U1a+U1b, C = U2, D = U3a+U3b).
 
@@ -163,3 +163,58 @@ Tareas completadas: 5.1–5.5 (5 de 5 del PR C). Pendientes: U3a, U3b (PR D). `s
 | S2 | Sin RED de producto: `submitting` ya bloquea el doble envío; doble clic en "Reintentar" con la petición pendiente da exactamente 2 llamadas en total | pasa |
 
 Resultados tras las correcciones: web 90 suites, 1348 tests (exit 0); cobertura 99,87 % sentencias / 99,31 % ramas / 99,48 % funciones / 100 % líneas; `eslint . --max-warnings 0` exit 0; `npm run typecheck` (raíz) exit 0; `prettier --check .` exit 0; `npm run build -w apps/web` exit 0 (`check-out: out OK`).
+
+## Lote 4 — PR D (web: U3a + U3b, verify, zona, CV, logout y playground)
+
+Tareas completadas: 6.1–6.3 y 7.1–7.4 (7 de 7 del PR D). Total acumulado: todas las tareas de U0a a U3b. Pendiente solo el cierre del cambio (F1–F3). `size:exception` (4 PRs, `stacked-to-main`). La suite web no tipa (SWC): un import o prop inexistente falla en ejecución.
+
+### TDD Cycle Evidence
+
+| Tarea | RED | GREEN | REFACTOR |
+|-------|-----|-------|----------|
+| 6.1 (reducer) | `verifyReducer.test.ts`: 4 fallos de aserción (`FAILED` sin `failure`, `forbidden`/`unexpected` mapeados a `invalid`) | `VerifyState.error` y `FAILED` llevan `ApiFailure`; `errorVariant` exhaustivo con `blocked`; `verifyView` lleva `failure` en las variantes no `invalid` (así viaja `retryAfterSeconds`) | — |
+| 6.1 (vista) | `VerifyView.test.tsx`: 8 fallos de aserción (sin `blocked`, texto fijo en 429/503, sin "Reintentar" en 429) | `VerifyView`: "Reintentar" en `blocked`/`rate-limited`/`unavailable`, "Pedir un nuevo enlace" solo en `invalid`; texto por `apiErrorMessage(failure)`; `content/verify.ts` sin `text` salvo `invalid`; eyebrow de `unavailable` pasa a "Servicio no disponible" | `VerifyErrorCopy` sin `text` |
+| 6.1 (contenedor) | Sin RED de producto propio (lo cubrió la vista). Mutaciones a mano: `forbidden` -> `invalid` en `errorVariant`: 3 fallos; texto de `blocked` por el de `invalid`: 7 fallos; revertidas | 36 pasan (403 `ORIGIN_NOT_ALLOWED` y `ROLE_NOT_ALLOWED`; cuatro rechazos con distinto status/reason -> mismo HTML; `invalid-input`/`unauthorized` = HTML de `invalid-token`; 429 "Espera 2 minutos"; 503, `network`, `server`, `unexpected`; foco en el título; reintento con el mismo token) | — |
+| 6.2 | `useRecruiterSession.test.tsx`: 6 fallos (guardaba `kind`); `RecruiterZone.test.tsx`: 4 fallos de aserción (región `status` vacía en error, cuatro textos no distintos, 403 de refresh sin copy) | `SessionState.error` con `failure`; texto con `apiErrorMessage` dentro de la región `role="status"` única (misma región de "Verificando sesión", visible solo en error); `FocusHeading` con `key` para que el foco vaya al título en cada estado | Contenedor `.notice` envuelve título, región y botón |
+| 6.3 | Cubierto por 6.1/6.2: axe en `blocked`, `rate-limited`, `unavailable` y zona con 403; el DOM no contiene `CloudFront` ni `CDN_REQUIRED` | pasan | — |
+| 7.1 | `CvCard.test.tsx` y `RecruiterZone.test.tsx`: 6 fallos de aserción con 7.1/7.2 (503 mostraba el copy genérico; `error` no existía; 429 de logout) | `CvCard` recibe `error: string \| null`; `CvStatus` = `{status:'idle'\|'busy'} \| {status:'failed'; failure}`; `cvOverrides` (`unexpected` -> `cv.failed`) en `recruiterOverrides.ts`; URL no navegable y excepción del gateway = `unexpected` | — |
+| 7.2 | (junto con 7.1) | `logoutFailure: ApiFailure \| null`, `logoutOverrides` (`unexpected` -> `session.logoutFailed`); 429 muestra "Espera 2 minutos" con `role="alert"`; `network` ya no usa el copy de logout sino el de conexión | — |
+| 7.3 | `ResponseViewer.test.tsx` y `ApiPlayground.test.tsx`: 5 fallos de aserción (sin línea explicativa para 403/5xx) | `<p>` bajo `CodeWindow` con `apiErrorMessage(response.failure, playgroundOverrides)`; override `ROLE_NOT_ALLOWED` en `recruiterOverrides.ts` y copy en `content/recruiter.ts`; 200 sin línea; status y cuerpo crudos intactos | — |
+| 7.3 (`aria-pressed`) | Ya correcto, sin RED de producto. Mutación a mano: `aria-pressed={true}` en `EndpointButton`: 3 fallos; revertida | 5 botones, exactamente uno `true` | — |
+| 7.4 | Cubierto por 7.1–7.3: axe con las dos alertas (CV y logout), con la línea del playground; el DOM no contiene `CloudFront` | pasan | — |
+
+### Resultados finales (apps/web, raíz)
+
+| Chequeo | Resultado |
+|---------|-----------|
+| Unitarias con cobertura (`npm run test:cov -w apps/web`) | 90 suites, 1391 tests (exit 0); 99,87 % sentencias / 99,34 % ramas / 99,48 % funciones / 100 % líneas |
+| `npx eslint . --max-warnings 0` | exit 0 |
+| `npm run typecheck` (raíz) | exit 0 |
+| `npx prettier --check .` | exit 0 |
+| `npm run build -w apps/web` | exit 0 (`check-out: out OK`) |
+
+### Archivos
+
+- Creado: `apps/web/src/features/recruiter/recruiterOverrides.ts`.
+- Modificados: `features/login/{verifyReducer,VerifyContainer,VerifyView}` (+ tests), `features/recruiter/{useRecruiterSession,RecruiterZone,CvCard}` (+ tests), `features/recruiter/playground/ResponseViewer` (+ tests de viewer y playground), `content/{verify,recruiter,types}.ts`.
+
+### Desviaciones y notas
+
+- `recruiter.error.text` ("Revisa tu conexión…") se eliminó: el texto de la zona sale ahora del diccionario.
+- El estado de error de la zona reutiliza la región `role="status"` existente (visible solo en error) en lugar de añadir un segundo `status`, para no duplicar anuncios.
+- Un fallo del cargador del gateway en CV/logout se trata como `unexpected` (mantiene el copy actual de CV/logout); `network` real (`{ok:false, error:'network'}`) usa el copy de conexión del diccionario.
+- El estado guarda el resultado completo (`{ok:false} & ApiFailure`) como `failure`; es asignable a `ApiFailure`.
+- Eyebrow de `unavailable` en verify: "Sin conexión con la API" -> "Servicio no disponible" (cubre también 5xx).
+- Tamaño: ~807 adiciones / 113 eliminaciones; cubierto por `size:exception`.
+
+### Lote 4 — correcciones de revisión (W1, S1, S2, S3, S4)
+
+| Id | RED | GREEN |
+|----|-----|-------|
+| W1 | `VerifyView.test.tsx`: fallos de aserción (el título no tenía descripción accesible; esperada "Espera 2 minutos…" en `rate-limited` y el copy de rol en `blocked`) | `aria-describedby` en el h1 apuntando al `<p>` del texto (`useId`); el foco sigue en el título. Los tests de HTML idéntico de `VerifyContainer` normalizan los ids de `useId` |
+| S1 | Los fakes de verify y zona (axe con 403) ahora llevan `message: 'served via CloudFront'`. Prueba de que pueden fallar: `apiErrorMessage` devolviendo `failure.message` temporalmente hizo fallar 11 tests (9 de verify, 2 de zona); revertido | Pasan con el código real |
+| S2 | `VerifyView.test.tsx`: el eyebrow de `unavailable` ("Servicio no disponible") no era neutro para network/server/unexpected | `content/verify.ts`: "Algo salió mal" |
+| S3 | Sin RED (comentarios) | Regla documentada: excepción del cargador = `network` en `VerifyContainer` y `useRecruiterSession`; `unexpected` en CV/logout (`RecruiterZone`) para conservar su copy |
+| S4 | `ResponseViewer.test.tsx`: 1 fallo (la región viva solo decía `GET …: 403 Forbidden`) | `spoken` = estado + ". " + línea explicativa si hay `failure`; con 200 queda igual. Los tests de la línea visible ignoran la región viva (`VISIBLE`) |
+
+Resultados tras las correcciones: web 90 suites, 1395 tests; cobertura 99,87 % sentencias / 99,34 % ramas / 99,48 % funciones / 100 % líneas (exit 0); `eslint . --max-warnings 0` exit 0; `npm run typecheck` (raíz) exit 0; `prettier --check .` exit 0; `npm run build -w apps/web` exit 0 (`check-out: out OK`).
