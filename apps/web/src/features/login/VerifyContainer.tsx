@@ -54,12 +54,11 @@ function VerifyFlow({ token, gatewayLoader }: VerifyFlowProps) {
       const gateway = await gatewayLoader();
       const result = await gateway.verifyToken(token.token);
       dispatch(
-        result.ok
-          ? { type: 'SUCCEEDED' }
-          : { type: 'FAILED', kind: result.error },
+        result.ok ? { type: 'SUCCEEDED' } : { type: 'FAILED', failure: result },
       );
     } catch {
-      dispatch({ type: 'FAILED', kind: 'network' });
+      // A gateway that cannot load or throws counts as `network` (retryable).
+      dispatch({ type: 'FAILED', failure: { error: 'network' } });
     } finally {
       inFlight.current = false;
     }

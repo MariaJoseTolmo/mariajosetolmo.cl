@@ -8,13 +8,16 @@ import { Button } from '@/components/ui/Button';
 import { Eyebrow } from '@/components/ui/Eyebrow';
 import { recruiter } from '@/content/recruiter';
 import { loadGateway } from '@/lib/api';
+import { apiErrorMessage } from '@/lib/apiErrorMessage';
 import type { ApiGateway } from '@/lib/api/port';
+import type { ApiFailure } from '@/lib/api/types';
 import { ContactCard } from './ContactCard';
 import { CvCard } from './CvCard';
 import { DetailsCard } from './DetailsCard';
 import { greeting } from './greeting';
 import { ApiPlayground } from './playground/ApiPlayground';
 import styles from './RecruiterZone.module.css';
+import { cvOverrides, logoutOverrides } from './recruiterOverrides';
 import { isNavigableUrl } from './safeUrl';
 import { SessionBar } from './SessionBar';
 import { useRecruiterSession } from './useRecruiterSession';
@@ -28,7 +31,14 @@ interface RecruiterZoneProps {
 
 const navigateTo = (url: string) => window.location.assign(url);
 
-type CvStatus = 'idle' | 'busy' | 'failed';
+type CvStatus =
+  { status: 'idle' | 'busy' } | { status: 'failed'; failure: ApiFailure };
+
+/**
+ * A link that cannot be opened, or a gateway that throws, counts as
+ * `unexpected` here (not `network`) to keep the CV and logout copy.
+ */
+const UNEXPECTED: ApiFailure = { error: 'unexpected' };
 
 /** Heading that takes focus when it appears: the page content just changed. */
 function FocusHeading({
@@ -57,8 +67,8 @@ export function RecruiterZone({
 }: RecruiterZoneProps) {
   const router = useRouter();
   const { state, retry } = useRecruiterSession(gatewayLoader);
-  const [cvStatus, setCvStatus] = useState<CvStatus>('idle');
-  const [logoutFailed, setLogoutFailed] = useState(false);
+  const [cvStatus, setCvStatus] = useState<CvStatus>({ status: 'idle' });
+  const [logoutFailure, setLogoutFailure] = useState<ApiFailure | null>(null);
   // "Reintentar" removes its own button: focus follows to the next heading.
   const [retried, setRetried] = useState(false);
   // The live region must exist before its text does, or it is not announced.
@@ -81,7 +91,8 @@ export function RecruiterZone({
   async function handleDownload() {
     if (downloading.current) return;
     downloading.current = true;
-    setCvStatus('busy');
+    setCvStatus({ status: 'busy' });
+    let failure = UNEXPECTED;
     try {
       const gateway = await gatewayLoader();
       const result = await gateway.getCvLink();
@@ -91,21 +102,23 @@ export function RecruiterZone({
       }
       if (result.ok && isNavigableUrl(result.data.url)) {
         openUrl(result.data.url);
-        setCvStatus('idle');
+        setCvStatus({ status: 'idle' });
         return;
       }
+      if (!result.ok) failure = result;
     } catch {
       // Falls through to the failed state.
     } finally {
       downloading.current = false;
     }
-    setCvStatus('failed');
+    setCvStatus({ status: 'failed', failure });
   }
 
   async function handleLogout() {
     if (loggingOut.current) return;
     loggingOut.current = true;
-    setLogoutFailed(false);
+    setLogoutFailure(null);
+    let failure = UNEXPECTED;
     try {
       const gateway = await gatewayLoader();
       const result = await gateway.logout();
@@ -114,12 +127,13 @@ export function RecruiterZone({
         router.replace('/');
         return;
       }
+      failure = result;
     } catch {
       // Falls through to the warning.
     } finally {
       loggingOut.current = false;
     }
-    setLogoutFailed(true);
+    setLogoutFailure(failure);
   }
 
   if (state.status === 'authorized') {
@@ -134,9 +148,9 @@ export function RecruiterZone({
           />
         </SiteHeader>
         <main id="contenido" className={styles.main}>
-          {logoutFailed ? (
+          {logoutFailure ? (
             <p role="alert" className={styles.alert}>
-              {recruiter.session.logoutFailed}
+              {apiErrorMessage(logoutFailure, logoutOverrides)}
             </p>
           ) : null}
           <div className={styles.intro}>
@@ -147,8 +161,12 @@ export function RecruiterZone({
           <div className={styles.grid}>
             <CvCard
               onDownload={() => void handleDownload()}
-              busy={cvStatus === 'busy'}
-              failed={cvStatus === 'failed'}
+              busy={cvStatus.status === 'busy'}
+              error={
+                cvStatus.status === 'failed'
+                  ? apiErrorMessage(cvStatus.failure, cvOverrides)
+                  : null
+              }
             />
             <ContactCard />
             <DetailsCard availability={me.availability} />
@@ -163,15 +181,29 @@ export function RecruiterZone({
     );
   }
 
-  const checking = state.status !== 'error';
+  const failed = state.status === 'error';
   return (
     <>
       <SiteHeader variant="minimal" />
       <main id="contenido" className={styles.main}>
-        {state.status === 'error' ? (
-          <div className={styles.notice}>
-            <FocusHeading>{recruiter.error.title}</FocusHeading>
-            <p className={styles.lead}>{recruiter.error.text}</p>
+        <div className={styles.notice}>
+          {failed ? (
+            <FocusHeading key="error">{recruiter.error.title}</FocusHeading>
+          ) : (
+            <FocusHeading key="checking" takeFocus={retried}>
+              {recruiter.checking.title}
+            </FocusHeading>
+          )}
+          {/* One live region for the whole life of the screen: it must exist
+              before its text does. It is visible only while it carries an error. */}
+          <div role="status" className={failed ? styles.lead : styles.live}>
+            {state.status === 'error'
+              ? apiErrorMessage(state.failure)
+              : mounted
+                ? recruiter.checking.title
+                : ''}
+          </div>
+          {failed ? (
             <Button
               size={48}
               onClick={() => {
@@ -181,14 +213,7 @@ export function RecruiterZone({
             >
               {recruiter.error.retry}
             </Button>
-          </div>
-        ) : (
-          <FocusHeading takeFocus={retried}>
-            {recruiter.checking.title}
-          </FocusHeading>
-        )}
-        <div role="status" className={styles.live}>
-          {checking && mounted ? recruiter.checking.title : ''}
+          ) : null}
         </div>
       </main>
       <Footer />

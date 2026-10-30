@@ -4,7 +4,13 @@ import userEvent from '@testing-library/user-event';
 import { axe } from '@/test/axe';
 import { createHttpGateway, type ResponseLike } from '@/lib/api/http';
 import type { ApiGateway } from '@/lib/api/port';
-import type { ApiResult, CvLink, Me, RawResponse } from '@/lib/api/types';
+import type {
+  ApiFailure,
+  ApiResult,
+  CvLink,
+  Me,
+  RawResponse,
+} from '@/lib/api/types';
 import { RecruiterZone } from './RecruiterZone';
 
 const replace = jest.fn();
@@ -132,7 +138,9 @@ describe('RecruiterZone session guard', () => {
     expect(region).toHaveTextContent('Verificando sesión');
     await screen.findByRole('button', { name: 'Reintentar' });
     expect(screen.getByRole('status')).toBe(region);
-    expect(region).toBeEmptyDOMElement();
+    expect(region).toHaveTextContent(
+      'No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+    );
     await user.click(screen.getByRole('button', { name: 'Reintentar' }));
     expect(screen.getByRole('status')).toBe(region);
     expect(region).toHaveTextContent('Verificando sesión');
@@ -197,6 +205,107 @@ describe('RecruiterZone session guard', () => {
       await screen.findByRole('button', { name: 'Reintentar' }),
     ).toBeInTheDocument();
     expect(replace).not.toHaveBeenCalled();
+  });
+
+  describe('failure copy', () => {
+    const CAUSES: [string, ApiFailure][] = [
+      [
+        '403',
+        { error: 'forbidden', status: 403, reason: 'ORIGIN_NOT_ALLOWED' },
+      ],
+      ['429', { error: 'rate-limited', status: 429, retryAfterSeconds: 120 }],
+      ['503', { error: 'server', status: 503, reason: 'SERVICE_UNAVAILABLE' }],
+      ['network', { error: 'network' }],
+    ];
+
+    async function textFor(failure: ApiFailure) {
+      const getMe = jest.fn(() => Promise.resolve({ ok: false, ...failure }));
+      const view = setup({ getMe: getMe as ApiGateway['getMe'] });
+      await screen.findByRole('button', { name: 'Reintentar' });
+      const text = screen.getByRole('status').textContent;
+      view.unmount();
+      return { text, replace: replace.mock.calls.length };
+    }
+
+    it('gives 403, 429, 503 and network four different texts and never redirects', async () => {
+      const texts: (string | null)[] = [];
+      for (const [, failure] of CAUSES) {
+        const result = await textFor(failure);
+        expect(result.replace).toBe(0);
+        texts.push(result.text);
+      }
+      expect(texts.every((t) => t && t.length > 0)).toBe(true);
+      expect(new Set(texts).size).toBe(4);
+      expect(texts[0]).toMatch(/sitio oficial/);
+      expect(texts[1]).toMatch(/Espera 2 minutos/);
+      expect(texts[2]).toMatch(/El servicio no está disponible/);
+      expect(texts[3]).toMatch(/No pudimos conectar/);
+    });
+
+    it('announces the text in the status region and focuses the title', async () => {
+      setup({
+        getMe: () =>
+          Promise.resolve({ ok: false, error: 'server', status: 500 }),
+      });
+      const heading = await screen.findByRole('heading', {
+        level: 1,
+        name: 'No pudimos verificar tu sesión',
+      });
+      expect(heading).toHaveFocus();
+      expect(screen.getAllByRole('status')).toHaveLength(1);
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Algo falló de nuestro lado. Inténtalo de nuevo.',
+      );
+    });
+
+    it('asks again exactly once when "Reintentar" is pressed', async () => {
+      const getMe = jest
+        .fn<ReturnType<ApiGateway['getMe']>, []>()
+        .mockResolvedValueOnce({
+          ok: false,
+          error: 'rate-limited',
+          status: 429,
+        })
+        .mockImplementationOnce(() => new Promise(() => undefined));
+      const { user } = setup({ getMe });
+      await user.click(
+        await screen.findByRole('button', { name: 'Reintentar' }),
+      );
+      expect(getMe).toHaveBeenCalledTimes(2);
+    });
+
+    it('shows the official-site copy, without redirecting, when the refresh is blocked', async () => {
+      setup({
+        getMe: () =>
+          Promise.resolve({
+            ok: false,
+            error: 'forbidden',
+            status: 403,
+            reason: 'CDN_REQUIRED',
+          }),
+      });
+      await screen.findByRole('button', { name: 'Reintentar' });
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'La solicitud no llegó desde el sitio oficial',
+      );
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    it('has no axe violations and none of the API internals in the error state', async () => {
+      const { container } = setup({
+        getMe: () =>
+          Promise.resolve({
+            message: 'served via CloudFront',
+            ok: false,
+            error: 'forbidden',
+            status: 403,
+            reason: 'CDN_REQUIRED',
+          }),
+      });
+      await screen.findByRole('button', { name: 'Reintentar' });
+      expect(await axe(container)).toHaveNoViolations();
+      expect(container.textContent).not.toMatch(/CloudFront|CDN_REQUIRED/);
+    });
   });
 });
 
@@ -346,17 +455,57 @@ describe('RecruiterZone CV download', () => {
     await waitFor(() => expect(openUrl).toHaveBeenCalledWith(LINK.url));
   });
 
-  it('shows an alert and opens nothing when the link cannot be created', async () => {
+  it('shows the service-unavailable copy, not the connection one, on a 503', async () => {
     const { openUrl, user } = setup({
-      getCvLink: () => Promise.resolve({ ok: false, error: 'server' }),
+      getCvLink: () =>
+        Promise.resolve({
+          ok: false,
+          error: 'server',
+          status: 503,
+          reason: 'SERVICE_UNAVAILABLE',
+        }),
+    });
+    await screen.findByText(/Gracias por tu interés/);
+    await user.click(screen.getByRole('button', { name: 'Descargar PDF' }));
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('El servicio no está disponible');
+    expect(alert).not.toHaveTextContent('No pudimos conectar');
+    expect(openUrl).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Descargar PDF' })).toBeEnabled();
+  });
+
+  it('tells a network failure apart from a 503 and from a rate limit', async () => {
+    const texts: (string | null)[] = [];
+    for (const failure of [
+      { error: 'network' },
+      { error: 'rate-limited', status: 429, retryAfterSeconds: 60 },
+      { error: 'forbidden', status: 403, reason: 'CDN_REQUIRED' },
+    ] as const) {
+      const { user, unmount } = setup({
+        getCvLink: () => Promise.resolve({ ok: false, ...failure }),
+      });
+      await screen.findByText(/Gracias por tu interés/);
+      await user.click(screen.getByRole('button', { name: 'Descargar PDF' }));
+      texts.push((await screen.findByRole('alert')).textContent);
+      unmount();
+    }
+    expect(new Set(texts).size).toBe(3);
+    expect(texts[0]).toMatch(/No pudimos conectar/);
+    expect(texts[1]).toMatch(/Espera un minuto/);
+    expect(texts[2]).toMatch(/sitio oficial/);
+  });
+
+  it('keeps the CV-specific copy for an unexpected answer', async () => {
+    const { openUrl, user } = setup({
+      getCvLink: () =>
+        Promise.resolve({ ok: false, error: 'unexpected', status: 418 }),
     });
     await screen.findByText(/Gracias por tu interés/);
     await user.click(screen.getByRole('button', { name: 'Descargar PDF' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'No pudimos generar el enlace del CV',
+      'No pudimos generar el enlace del CV. Inténtalo de nuevo.',
     );
     expect(openUrl).not.toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: 'Descargar PDF' })).toBeEnabled();
   });
 
   it('refuses to open a URL that is not https', async () => {
@@ -369,7 +518,9 @@ describe('RecruiterZone CV download', () => {
     });
     await screen.findByText(/Gracias por tu interés/);
     await user.click(screen.getByRole('button', { name: 'Descargar PDF' }));
-    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'No pudimos generar el enlace del CV',
+    );
     expect(openUrl).not.toHaveBeenCalled();
   });
 
@@ -387,7 +538,9 @@ describe('RecruiterZone CV download', () => {
     const { user } = setup({ getCvLink: () => Promise.reject(new Error('x')) });
     await screen.findByText(/Gracias por tu interés/);
     await user.click(screen.getByRole('button', { name: 'Descargar PDF' }));
-    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'No pudimos generar el enlace del CV',
+    );
   });
 });
 
@@ -451,23 +604,56 @@ describe('RecruiterZone logout', () => {
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/'));
   });
 
-  it('stays and warns if the logout could not be completed', async () => {
+  it('shows the wait copy with role="alert" on a rate limit, and stays', async () => {
+    const { user } = setup({
+      logout: () =>
+        Promise.resolve({
+          ok: false,
+          error: 'rate-limited',
+          status: 429,
+          reason: 'RATE_LIMITED',
+          retryAfterSeconds: 120,
+        }),
+    });
+    await screen.findByText(/Gracias por tu interés/);
+    await user.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Espera 2 minutos',
+    );
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('stays and says it could not connect on a network failure', async () => {
     const { user } = setup({
       logout: () => Promise.resolve({ ok: false, error: 'network' }),
     });
     await screen.findByText(/Gracias por tu interés/);
     await user.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'No pudimos cerrar la sesión',
+      'No pudimos conectar con el servidor',
     );
     expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('keeps the logout-specific copy for an unexpected answer', async () => {
+    const { user } = setup({
+      logout: () =>
+        Promise.resolve({ ok: false, error: 'unexpected', status: 418 }),
+    });
+    await screen.findByText(/Gracias por tu interés/);
+    await user.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'No pudimos cerrar la sesión. Inténtalo de nuevo.',
+    );
   });
 
   it('stays and warns if the gateway throws', async () => {
     const { user } = setup({ logout: () => Promise.reject(new Error('x')) });
     await screen.findByText(/Gracias por tu interés/);
     await user.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
-    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'No pudimos cerrar la sesión',
+    );
     expect(replace).not.toHaveBeenCalled();
   });
 });
@@ -494,6 +680,30 @@ describe('RecruiterZone accessibility', () => {
       ).toHaveLength(1);
     },
   );
+});
+
+describe('RecruiterZone failure alerts', () => {
+  const leaky = {
+    ok: false,
+    error: 'server',
+    status: 503,
+    reason: 'SERVICE_UNAVAILABLE',
+    message: 'served via CloudFront',
+  } as const;
+
+  it('has no axe violations with the CV and logout alerts, and never shows the API message', async () => {
+    const { container, user } = setup({
+      getCvLink: () => Promise.resolve(leaky),
+      logout: () => Promise.resolve(leaky),
+    });
+    await screen.findByText(/Gracias por tu interés/);
+    await user.click(screen.getByRole('button', { name: 'Descargar PDF' }));
+    await user.click(screen.getByRole('button', { name: 'Cerrar sesión' }));
+    await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(2));
+    await act(() => new Promise((resolve) => setTimeout(resolve, 20)));
+    expect(await axe(container)).toHaveNoViolations();
+    expect(container.textContent).not.toMatch(/CloudFront/);
+  });
 });
 
 describe('RecruiterZone with the real http adapter', () => {

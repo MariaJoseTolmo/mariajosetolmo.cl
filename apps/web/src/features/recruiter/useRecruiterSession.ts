@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { ApiGateway } from '@/lib/api/port';
-import type { ApiErrorKind, Me } from '@/lib/api/types';
+import type { ApiFailure, Me } from '@/lib/api/types';
 
 export type SessionState =
   | { status: 'checking' }
   | { status: 'authorized'; me: Me }
   | { status: 'redirecting' }
-  | { status: 'error'; kind: ApiErrorKind };
+  | { status: 'error'; failure: ApiFailure };
 
 /**
  * Session guard: asks `getMe()` on mount. Only `unauthorized` (after the
@@ -31,9 +31,10 @@ export function useRecruiterSession(gatewayLoader: () => Promise<ApiGateway>): {
         if (result.ok) settle({ status: 'authorized', me: result.data });
         else if (result.error === 'unauthorized')
           settle({ status: 'redirecting' });
-        else settle({ status: 'error', kind: result.error });
+        else settle({ status: 'error', failure: result });
       })
-      .catch(() => settle({ status: 'error', kind: 'network' }));
+      // A gateway that cannot load or throws counts as `network` (retryable).
+      .catch(() => settle({ status: 'error', failure: { error: 'network' } }));
     return () => {
       cancelled = true;
     };

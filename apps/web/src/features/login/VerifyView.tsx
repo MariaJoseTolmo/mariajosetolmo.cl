@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Eyebrow } from '@/components/ui/Eyebrow';
 import { LinkButton } from '@/components/ui/LinkButton';
 import { verify } from '@/content/verify';
+import { apiErrorMessage } from '@/lib/apiErrorMessage';
 import styles from './VerifyView.module.css';
 import type { VerifyViewState } from './verifyReducer';
 
@@ -18,10 +19,18 @@ interface StateProps {
   title: string;
   /** Move focus to the heading: the card content was just swapped. */
   takeFocus?: boolean;
+  /** Id of the text that explains the state: read out when the title takes focus. */
+  describedBy?: string;
   children?: ReactNode;
 }
 
-function State({ eyebrow, title, takeFocus = false, children }: StateProps) {
+function State({
+  eyebrow,
+  title,
+  takeFocus = false,
+  describedBy,
+  children,
+}: StateProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -35,6 +44,7 @@ function State({ eyebrow, title, takeFocus = false, children }: StateProps) {
         ref={headingRef}
         id="verify-heading"
         tabIndex={-1}
+        aria-describedby={describedBy}
         className={styles.title}
       >
         {title}
@@ -48,6 +58,7 @@ export function VerifyView({ view, onConfirm, onResetDemo }: VerifyViewProps) {
   // After "Reintentar" the button disappears with its error card, so focus
   // moves to the heading of the state that replaces it.
   const [retried, setRetried] = useState(false);
+  const textId = useId();
 
   switch (view.status) {
     case 'pending':
@@ -99,16 +110,27 @@ export function VerifyView({ view, onConfirm, onResetDemo }: VerifyViewProps) {
     }
     case 'error': {
       const copy = verify.errors[view.variant];
+      const text =
+        view.variant === 'invalid'
+          ? verify.errors.invalid.text
+          : apiErrorMessage(view.failure);
       return (
         <State
           key={view.variant}
           eyebrow={copy.eyebrow}
           title={copy.title}
           takeFocus
+          describedBy={textId}
         >
-          <p className={styles.text}>{copy.text}</p>
+          <p id={textId} className={styles.text}>
+            {text}
+          </p>
           <div className={styles.actions}>
-            {view.variant === 'unavailable' ? (
+            {view.variant === 'invalid' ? (
+              <LinkButton href="/acceso/" size={52}>
+                {verify.newLink}
+              </LinkButton>
+            ) : (
               <Button
                 size={52}
                 onClick={() => {
@@ -118,10 +140,6 @@ export function VerifyView({ view, onConfirm, onResetDemo }: VerifyViewProps) {
               >
                 {verify.retry}
               </Button>
-            ) : (
-              <LinkButton href="/acceso/" size={52}>
-                {verify.newLink}
-              </LinkButton>
             )}
           </div>
         </State>

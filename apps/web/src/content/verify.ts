@@ -21,15 +21,14 @@ export const verify: VerifyContent = {
       title: 'Este enlace no es válido',
       text: 'Puede haber vencido (dura 15 minutos), haberse usado ya o estar incompleto. Pide uno nuevo para continuar.',
     },
+    blocked: { eyebrow: '403 Forbidden', title: 'Acceso bloqueado' },
     'rate-limited': {
       eyebrow: '429 Too Many Requests',
       title: 'Demasiados intentos',
-      text: 'Espera unos minutos y pide un enlace nuevo.',
     },
     unavailable: {
-      eyebrow: 'Sin conexión con la API',
+      eyebrow: 'Algo salió mal',
       title: 'No pudimos confirmar tu ingreso',
-      text: 'Revisa tu conexión e inténtalo de nuevo. Si el enlace ya se usó, pide uno nuevo en /acceso/.',
     },
   },
   newLink: 'Pedir un nuevo enlace',

@@ -1,6 +1,7 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from '@/test/axe';
+import type { ApiFailure } from '@/lib/api/types';
 import type { VerifyViewState } from './verifyReducer';
 import { VerifyView } from './VerifyView';
 
@@ -68,13 +69,6 @@ describe('VerifyView', () => {
     expect(region).toHaveTextContent('Confirmando…');
   });
 
-  it('suggests asking for a new link when the failure may be a used link', () => {
-    setup({ status: 'error', variant: 'unavailable' });
-    expect(
-      screen.getByText(/Si el enlace ya se usó, pide uno nuevo en \/acceso\//),
-    ).toBeInTheDocument();
-  });
-
   it('welcomes the user when done, links to the recruiter zone and takes focus', () => {
     setup({ status: 'done' });
     expect(heading()).toHaveTextContent('Bienvenida, bienvenido');
@@ -95,21 +89,139 @@ describe('VerifyView', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 
-  it('tells apart too many attempts', () => {
-    setup({ status: 'error', variant: 'rate-limited' });
-    expect(heading()).toHaveTextContent('Demasiados intentos');
+  it('blocks with the 403 eyebrow and the official-site copy, with a retry', async () => {
+    const { onConfirm } = setup({
+      status: 'error',
+      variant: 'blocked',
+      failure: {
+        error: 'forbidden',
+        status: 403,
+        reason: 'ORIGIN_NOT_ALLOWED',
+      },
+    });
+    expect(screen.getByText('403 Forbidden')).toBeInTheDocument();
+    expect(heading()).toHaveTextContent('Acceso bloqueado');
+    expect(heading()).toHaveFocus();
     expect(
-      screen.getByRole('link', { name: 'Pedir un nuevo enlace' }),
-    ).toHaveAttribute('href', expect.stringMatching(/^\/acceso\/?$/));
+      screen.getByText(/La solicitud no llegó desde el sitio oficial/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Este enlace no es válido/)).toBeNull();
+    expect(screen.queryByRole('link')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+  });
+
+  it('describes the title with the error text so it is announced on focus', () => {
+    const { unmount } = setup({
+      status: 'error',
+      variant: 'rate-limited',
+      failure: { error: 'rate-limited', status: 429, retryAfterSeconds: 120 },
+    });
+    expect(heading()).toHaveAccessibleDescription(
+      'Hiciste demasiados intentos. Espera 2 minutos y vuelve a intentarlo.',
+    );
+    unmount();
+    setup({
+      status: 'error',
+      variant: 'blocked',
+      failure: { error: 'forbidden', status: 403, reason: 'ROLE_NOT_ALLOWED' },
+    });
+    expect(heading()).toHaveAccessibleDescription(
+      'Tu rol no tiene permiso para ver este recurso.',
+    );
+  });
+
+  it('describes the invalid-link title with its text too', () => {
+    setup({ status: 'error', variant: 'invalid' });
+    expect(heading()).toHaveAccessibleDescription(/Pide uno nuevo/);
+  });
+
+  it('uses a neutral eyebrow for unavailable, whatever the cause', () => {
+    for (const failure of [
+      { error: 'network' },
+      { error: 'server', status: 503 },
+      { error: 'unexpected', status: 418 },
+    ] as const) {
+      const { unmount } = setup({
+        status: 'error',
+        variant: 'unavailable',
+        failure,
+      });
+      expect(screen.getByText('Algo salió mal')).toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it('gives a role 403 its own copy instead of the official-site one', () => {
+    setup({
+      status: 'error',
+      variant: 'blocked',
+      failure: { error: 'forbidden', status: 403, reason: 'ROLE_NOT_ALLOWED' },
+    });
+    expect(screen.getByText(/Tu rol no tiene permiso/)).toBeInTheDocument();
+    expect(screen.queryByText(/sitio oficial/)).toBeNull();
+  });
+
+  it('tells apart too many attempts, with the wait time and a retry', async () => {
+    const { onConfirm } = setup({
+      status: 'error',
+      variant: 'rate-limited',
+      failure: { error: 'rate-limited', status: 429, retryAfterSeconds: 120 },
+    });
+    expect(heading()).toHaveTextContent('Demasiados intentos');
+    expect(screen.getByText(/Espera 2 minutos/)).toBeInTheDocument();
+    expect(screen.queryByRole('link')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses a neutral wait when the API gave no time', () => {
+    setup({
+      status: 'error',
+      variant: 'rate-limited',
+      failure: { error: 'rate-limited', status: 429 },
+    });
+    expect(screen.getByText(/Espera unos minutos/)).toBeInTheDocument();
   });
 
   it('tells apart a network problem and lets the user retry', async () => {
-    const { onConfirm } = setup({ status: 'error', variant: 'unavailable' });
+    const { onConfirm } = setup({
+      status: 'error',
+      variant: 'unavailable',
+      failure: { error: 'network' },
+    });
     expect(heading()).toHaveTextContent('No pudimos confirmar tu ingreso');
     expect(heading()).toHaveFocus();
+    expect(
+      screen.getByText(/No pudimos conectar con el servidor/),
+    ).toBeInTheDocument();
     expect(screen.queryByText('Este enlace no es válido')).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
     expect(onConfirm).toHaveBeenCalledTimes(1);
+  });
+
+  it.each<[string, ApiFailure, RegExp]>([
+    [
+      'server 500',
+      { error: 'server', status: 500 },
+      /Algo falló de nuestro lado/,
+    ],
+    [
+      'unavailable 503',
+      { error: 'server', status: 503, reason: 'SERVICE_UNAVAILABLE' },
+      /El servicio no está disponible/,
+    ],
+    [
+      'unexpected',
+      { error: 'unexpected', status: 418 },
+      /respuesta inesperada/,
+    ],
+  ])('explains %s from the dictionary with a retry', (_n, failure, text) => {
+    setup({ status: 'error', variant: 'unavailable', failure });
+    expect(screen.getByText(text)).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Reintentar' }),
+    ).toBeInTheDocument();
   });
 
   it('offers "Reiniciar demo" in the done state of mock mode only', async () => {
@@ -141,8 +253,30 @@ describe('VerifyView', () => {
     ['confirming', { status: 'confirming' }],
     ['done', { status: 'done' }],
     ['invalid', { status: 'error', variant: 'invalid' }],
-    ['rate-limited', { status: 'error', variant: 'rate-limited' }],
-    ['unavailable', { status: 'error', variant: 'unavailable' }],
+    [
+      'blocked',
+      {
+        status: 'error',
+        variant: 'blocked',
+        failure: { error: 'forbidden', status: 403, reason: 'CDN_REQUIRED' },
+      },
+    ],
+    [
+      'rate-limited',
+      {
+        status: 'error',
+        variant: 'rate-limited',
+        failure: { error: 'rate-limited', status: 429, retryAfterSeconds: 60 },
+      },
+    ],
+    [
+      'unavailable',
+      {
+        status: 'error',
+        variant: 'unavailable',
+        failure: { error: 'server', status: 503 },
+      },
+    ],
   ])(
     'has no axe violations in the %s state (mock and http)',
     async (_n, view) => {

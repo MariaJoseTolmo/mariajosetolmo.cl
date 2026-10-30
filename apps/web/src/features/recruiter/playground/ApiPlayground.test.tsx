@@ -11,6 +11,9 @@ import type {
 } from '@/lib/api/types';
 import { ApiPlayground } from './ApiPlayground';
 
+/** The visible line, not the (visually hidden) live region that repeats it. */
+const VISIBLE = { ignore: '[role="status"]' };
+
 const unused = () => Promise.reject(new Error('not used by the playground'));
 
 const okResponse = (endpoint: PlaygroundEndpoint): ApiResult<RawResponse> =>
@@ -20,7 +23,12 @@ const okResponse = (endpoint: PlaygroundEndpoint): ApiResult<RawResponse> =>
         data: {
           status: 403,
           statusText: 'Forbidden',
-          body: { statusCode: 403 },
+          body: { statusCode: 403, code: 'ROLE_NOT_ALLOWED' },
+          failure: {
+            error: 'forbidden',
+            status: 403,
+            reason: 'ROLE_NOT_ALLOWED',
+          },
         },
       }
     : {
@@ -111,6 +119,55 @@ describe('ApiPlayground', () => {
     await user.click(screen.getByRole('button', { name: /admin\/visits/ }));
     await waitFor(() => expect(viewer()).toHaveTextContent('403 Forbidden'));
     expect(screen.queryByText(/No pudimos obtener/)).toBeNull();
+    expect(viewer()).toHaveTextContent('"code": "ROLE_NOT_ALLOWED"');
+    expect(
+      screen.getByText(
+        'Respuesta esperada: este endpoint es solo para el rol ADMIN.',
+        VISIBLE,
+      ),
+    ).toBeInTheDocument();
+    expect(pressed()).toHaveLength(1);
+    expect(pressed()[0]).toHaveTextContent('admin/visits');
+  });
+
+  it('shows no explanation for a 200 response', async () => {
+    setup();
+    await waitFor(() => expect(viewer()).toHaveTextContent('200 OK'));
+    expect(screen.queryByText(/Respuesta esperada/)).toBeNull();
+    expect(screen.queryByText(/El servicio no está disponible/)).toBeNull();
+  });
+
+  it('shows the dictionary line for a 5xx, and drops it on the next 200', async () => {
+    const { user } = setup((endpoint) =>
+      Promise.resolve(
+        endpoint === '/api/v1/me'
+          ? {
+              ok: true,
+              data: {
+                status: 503,
+                statusText: 'Service Unavailable',
+                body: { code: 'SERVICE_UNAVAILABLE' },
+                failure: {
+                  error: 'server',
+                  status: 503,
+                  reason: 'SERVICE_UNAVAILABLE',
+                },
+              },
+            }
+          : okResponse(endpoint),
+      ),
+    );
+    await waitFor(() => expect(viewer()).toHaveTextContent('200 OK'));
+    await user.click(screen.getByRole('button', { name: /api\/v1\/me/ }));
+    await waitFor(() => expect(viewer()).toHaveTextContent('503'));
+    expect(viewer()).toHaveTextContent('"code": "SERVICE_UNAVAILABLE"');
+    expect(
+      screen.getByText(/El servicio no está disponible/, VISIBLE),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/rol ADMIN/)).toBeNull();
+    await user.click(screen.getByRole('button', { name: /api\/v1\/profile/ }));
+    await waitFor(() => expect(viewer()).toHaveTextContent('200 OK'));
+    expect(screen.queryByText(/El servicio no está disponible/)).toBeNull();
   });
 
   it('ignores clicks while a request is in flight (guard) and announces loading', async () => {
@@ -234,5 +291,14 @@ describe('ApiPlayground', () => {
     const { container } = setup();
     await waitFor(() => expect(viewer()).toHaveTextContent('200 OK'));
     expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('has no axe violations with the explanation line, and no CloudFront in the DOM', async () => {
+    const { container, user } = setup();
+    await waitFor(() => expect(viewer()).toHaveTextContent('200 OK'));
+    await user.click(screen.getByRole('button', { name: /admin\/visits/ }));
+    await screen.findByText(/Respuesta esperada/, VISIBLE);
+    expect(await axe(container)).toHaveNoViolations();
+    expect(container.textContent).not.toMatch(/CloudFront/);
   });
 });

@@ -3,7 +3,7 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from '@/test/axe';
 import type { ApiGateway } from '@/lib/api/port';
-import type { ApiResult } from '@/lib/api/types';
+import type { ApiFailure, ApiResult } from '@/lib/api/types';
 import { VerifyContainer } from './VerifyContainer';
 
 const replace = jest.fn();
@@ -389,6 +389,165 @@ describe('VerifyContainer', () => {
       expect(
         within(container).getAllByRole('heading', { level: 1 }),
       ).toHaveLength(1);
+    },
+  );
+});
+
+/** `useId` differs per render; the markup must not otherwise. */
+const withoutIds = (html: string) =>
+  html.replace(/(id|aria-describedby)="[^"]*"/g, '');
+
+describe('VerifyContainer failures', () => {
+  // The API `message` is never read: a leaky one must not reach the DOM.
+  const LEAKY = { message: 'served via CloudFront' };
+  const failing = (failure: ApiFailure) =>
+    jest.fn<ReturnType<ApiGateway['verifyToken']>, [string]>(() =>
+      Promise.resolve({ ok: false, ...failure, ...LEAKY }),
+    );
+
+  async function confirmWith(failure: ApiFailure) {
+    const verifyToken = failing(failure);
+    const utils = setup('/acceso/verificar/#token=abc', verifyToken);
+    await screen.findByRole('heading', { name: 'Confirma tu ingreso' });
+    await utils.user.click(confirmButton());
+    return utils;
+  }
+
+  it('shows a 403 as blocked, not as an invalid link, and retries with the same token', async () => {
+    const verifyToken = jest
+      .fn<ReturnType<ApiGateway['verifyToken']>, [string]>()
+      .mockResolvedValueOnce({
+        ok: false,
+        error: 'forbidden',
+        status: 403,
+        reason: 'ORIGIN_NOT_ALLOWED',
+      })
+      .mockResolvedValueOnce(OK);
+    const { user } = setup('/acceso/verificar/#token=abc', verifyToken);
+    await screen.findByRole('heading', { name: 'Confirma tu ingreso' });
+    await user.click(confirmButton());
+    const heading = await screen.findByRole('heading', {
+      name: 'Acceso bloqueado',
+    });
+    expect(heading).toHaveFocus();
+    expect(screen.getByText('403 Forbidden')).toBeInTheDocument();
+    expect(screen.getByText(/sitio oficial/)).toBeInTheDocument();
+    expect(screen.queryByText(/Este enlace no es válido/)).toBeNull();
+    expect(screen.queryByRole('link')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Reintentar' }));
+    await screen.findByText('Bienvenida, bienvenido');
+    expect(verifyToken).toHaveBeenNthCalledWith(2, 'abc');
+  });
+
+  it('gives a role 403 its own copy', async () => {
+    await confirmWith({
+      error: 'forbidden',
+      status: 403,
+      reason: 'ROLE_NOT_ALLOWED',
+    });
+    await screen.findByRole('heading', { name: 'Acceso bloqueado' });
+    expect(screen.getByText(/Tu rol no tiene permiso/)).toBeInTheDocument();
+    expect(screen.queryByText(/sitio oficial/)).toBeNull();
+  });
+
+  it('renders the same HTML for unknown, expired, used and malformed links', async () => {
+    const htmls: string[] = [];
+    // Whatever differs in the failure (status, presence of a reason), the
+    // page must not tell which kind of rejection it was.
+    const rejections: ApiFailure[] = [
+      { error: 'invalid-token', status: 400, reason: 'INVALID_TOKEN' },
+      { error: 'invalid-token', status: 400 },
+      { error: 'invalid-token', status: 404, reason: 'INVALID_TOKEN' },
+      { error: 'invalid-token', status: 410, reason: 'INVALID_TOKEN' },
+    ];
+    for (const failure of rejections) {
+      const { container, unmount } = await confirmWith(failure);
+      await screen.findByRole('heading', { name: 'Este enlace no es válido' });
+      htmls.push(withoutIds(container.innerHTML));
+      unmount();
+    }
+    expect(new Set(htmls).size).toBe(1);
+    expect(htmls[0]).toContain('Pedir un nuevo enlace');
+  });
+
+  it.each<[string, ApiFailure]>([
+    ['invalid-input', { error: 'invalid-input', status: 400 }],
+    ['unauthorized', { error: 'unauthorized', status: 401 }],
+  ])('maps %s to the invalid-link state', async (_n, failure) => {
+    const invalid = await confirmWith({
+      error: 'invalid-token',
+      status: 400,
+      reason: 'INVALID_TOKEN',
+    });
+    await screen.findByRole('heading', { name: 'Este enlace no es válido' });
+    const reference = withoutIds(invalid.container.innerHTML);
+    invalid.unmount();
+    const { container } = await confirmWith(failure);
+    await screen.findByRole('heading', { name: 'Este enlace no es válido' });
+    expect(withoutIds(container.innerHTML)).toBe(reference);
+    expect(
+      screen.getByRole('link', { name: 'Pedir un nuevo enlace' }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows the wait time on a 429 and offers a retry', async () => {
+    const { verifyToken, user } = await confirmWith({
+      error: 'rate-limited',
+      status: 429,
+      reason: 'RATE_LIMITED',
+      retryAfterSeconds: 120,
+    });
+    expect(
+      await screen.findByRole('heading', { name: 'Demasiados intentos' }),
+    ).toHaveFocus();
+    expect(screen.getByText(/Espera 2 minutos/)).toBeInTheDocument();
+    expect(screen.queryByText(/Este enlace no es válido/)).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Reintentar' }));
+    await waitFor(() => expect(verifyToken).toHaveBeenCalledTimes(2));
+  });
+
+  it.each<[string, ApiFailure, RegExp]>([
+    [
+      '503',
+      { error: 'server', status: 503, reason: 'SERVICE_UNAVAILABLE' },
+      /El servicio no está disponible/,
+    ],
+    ['network', { error: 'network' }, /No pudimos conectar/],
+    ['server', { error: 'server', status: 500 }, /Algo falló de nuestro lado/],
+    [
+      'unexpected',
+      { error: 'unexpected', status: 418 },
+      /respuesta inesperada/,
+    ],
+  ])('shows %s as unavailable with a retry', async (_n, failure, text) => {
+    await confirmWith(failure);
+    expect(
+      await screen.findByRole('heading', {
+        name: 'No pudimos confirmar tu ingreso',
+      }),
+    ).toHaveFocus();
+    expect(screen.getByText(text)).toBeInTheDocument();
+    expect(screen.queryByText(/Este enlace no es válido/)).toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Reintentar' }),
+    ).toBeInTheDocument();
+  });
+
+  it.each<[string, ApiFailure]>([
+    ['blocked', { error: 'forbidden', status: 403, reason: 'CDN_REQUIRED' }],
+    [
+      'rate-limited',
+      { error: 'rate-limited', status: 429, retryAfterSeconds: 30 },
+    ],
+    ['unavailable', { error: 'server', status: 503 }],
+  ])(
+    'has no axe violations and no API internals in the %s state',
+    async (_n, failure) => {
+      const { container } = await confirmWith(failure);
+      await screen.findByRole('button', { name: 'Reintentar' });
+      await act(() => new Promise((resolve) => setTimeout(resolve, 20)));
+      expect(await axe(container)).toHaveNoViolations();
+      expect(container.textContent).not.toMatch(/CloudFront|CDN_REQUIRED/);
     },
   );
 });

@@ -4,7 +4,6 @@ export const recruiter: RecruiterContent = {
   checking: { title: 'Verificando sesión' },
   error: {
     title: 'No pudimos verificar tu sesión',
-    text: 'Revisa tu conexión e inténtalo de nuevo.',
     retry: 'Reintentar',
   },
   intro: {
@@ -43,5 +42,7 @@ export const recruiter: RecruiterContent = {
     failed:
       'No pudimos obtener la respuesta. Vuelve a elegir el endpoint para reintentar.',
     failedStatus: 'Sin respuesta',
+    roleNotAllowed:
+      'Respuesta esperada: este endpoint es solo para el rol ADMIN.',
   },
 };
