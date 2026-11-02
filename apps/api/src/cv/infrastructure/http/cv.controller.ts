@@ -1,6 +1,8 @@
 import { Controller, Get, Inject } from '@nestjs/common';
 import { ApiCookieAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { GetCvLink, type CvLink } from '../../application/get-cv-link.use-case';
+import { CurrentPrincipal } from '../../../shared/infrastructure/http/principal.decorator';
+import type { Principal } from '../../../identity/domain/principal';
 import { CvLinkResponseDto } from './cv-link-response.dto';
 
 @ApiTags('cv')
@@ -11,7 +13,7 @@ export class CvController {
 
   @Get()
   @ApiOkResponse({ type: CvLinkResponseDto })
-  cv(): Promise<CvLink> {
-    return this.getCvLink.execute();
+  cv(@CurrentPrincipal() principal: Principal): Promise<CvLink> {
+    return this.getCvLink.execute(principal);
   }
 }

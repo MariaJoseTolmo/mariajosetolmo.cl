@@ -4,8 +4,10 @@ import { GetCvLink } from './application/get-cv-link.use-case';
 import { CV_LINK_SIGNER } from './application/ports/cv-link-signer.port';
 import { createCvLinkSigner } from './infrastructure/cv-link-signer.factory';
 import { CvController } from './infrastructure/http/cv.controller';
+import { VisitsModule } from '../visits/visits.module';
 
 @Module({
+  imports: [VisitsModule],
   controllers: [CvController],
   providers: [
     GetCvLink,

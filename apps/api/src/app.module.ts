@@ -6,6 +6,7 @@ import { ContentModule } from './content/content.module';
 import { CvModule } from './cv/cv.module';
 import { HealthModule } from './health/health.module';
 import { IdentityModule } from './identity/identity.module';
+import { VisitsModule } from './visits/visits.module';
 import { SharedModule } from './shared/infrastructure/shared.module';
 
 @Module({
@@ -18,6 +19,7 @@ import { SharedModule } from './shared/infrastructure/shared.module';
     CvModule,
     ContentModule,
     HealthModule,
+    VisitsModule,
   ],
 })
 export class AppModule {}

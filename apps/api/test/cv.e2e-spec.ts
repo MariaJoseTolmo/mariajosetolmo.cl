@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { CV_LINK_SIGNER } from '../src/cv/application/ports/cv-link-signer.port';
 import { InfrastructureUnavailable } from '../src/shared/domain/errors';
+import { VISIT_REPOSITORY } from '../src/visits/application/ports/visit-repository.port';
 import { FakeCvLinkSigner } from './support/fakes/fake-cv-link.signer';
 import { createTestApp, type TestApp } from './support/test-app';
 
@@ -79,6 +80,47 @@ describe('GET /api/v1/cv (e2e)', () => {
     expect(logged).not.toContain('cv.example.test');
   });
 
+  describe('visit recording', () => {
+    it('creates one CV_LINK event per request, for the principal', async () => {
+      const cookie = await t.login({ id: 'user-7' });
+      await getCv(cookie).expect(200);
+      t.clock.advanceSeconds(5);
+      await getCv(cookie).expect(200);
+      await getCv(cookie).expect(200);
+      expect(t.visits.all()).toHaveLength(3);
+      expect(t.visits.all().map((e) => [e.userId, e.kind])).toEqual([
+        ['user-7', 'CV_LINK'],
+        ['user-7', 'CV_LINK'],
+        ['user-7', 'CV_LINK'],
+      ]);
+      expect(t.visits.all()[1]?.occurredAt).toEqual(t.clock.now());
+    });
+
+    it('records nothing without a session or with a garbage cookie', async () => {
+      await getCv().expect(401);
+      await getCv('__Host-access=not-a-token').expect(401);
+      expect(t.visits.all()).toEqual([]);
+    });
+
+    it('stores no signed url, in the event or in the logs', async () => {
+      const cookie = await t.login();
+      const res = await getCv(cookie).expect(200);
+      const url = (res.body as { url: string }).url;
+      const stored = JSON.stringify(t.visits.all());
+      const logged = JSON.stringify([t.logger.errors, t.logger.warnings]);
+      for (const text of [stored, logged]) {
+        expect(text).not.toContain(url);
+        expect(text).not.toContain('cv.example.test');
+      }
+      expect(Object.keys(t.visits.all()[0] ?? {}).sort()).toEqual([
+        'id',
+        'kind',
+        'occurredAt',
+        'userId',
+      ]);
+    });
+  });
+
   it('is documented with the cookie scheme and without secrets', async () => {
     const res = await request(t.server()).get('/api/docs-json').expect(200);
     const doc = res.body as { paths: Record<string, unknown> };
@@ -131,6 +173,39 @@ describe('GET /api/v1/cv with the configured signer (e2e)', () => {
         message: 'Service temporarily unavailable',
         code: 'SERVICE_UNAVAILABLE',
       });
+    } finally {
+      await t.close();
+    }
+  });
+});
+
+describe('GET /api/v1/cv when recording fails (e2e)', () => {
+  it('still answers 200 with the link and logs only the failure kind', async () => {
+    const t = await createTestApp({
+      customize: (builder) =>
+        builder.overrideProvider(VISIT_REPOSITORY).useValue({
+          append: () =>
+            Promise.reject(
+              // Synthetic raw Error with a code, only to check no PII is logged; production
+              // wraps errors in InfrastructureUnavailable (see postgres-down).
+              Object.assign(new Error('insert for recruiter@example.test'), {
+                code: '23503',
+              }),
+            ),
+        }),
+    });
+    try {
+      const cookie = await t.login();
+      const res = await request(t.server())
+        .get('/api/v1/cv')
+        .set('Cookie', cookie)
+        .expect(200);
+      const body = res.body as { url: string; expiresAt: string };
+      expect(Object.keys(body).sort()).toEqual(['expiresAt', 'url']);
+      expect(t.logger.errors).toEqual(['visit recording failed: Error 23503']);
+      const logged = JSON.stringify([t.logger.errors, t.logger.warnings]);
+      expect(logged).not.toContain('example.test');
+      expect(logged).not.toContain(body.url);
     } finally {
       await t.close();
     }
