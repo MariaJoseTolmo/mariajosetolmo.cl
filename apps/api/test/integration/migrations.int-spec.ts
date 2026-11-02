@@ -10,6 +10,7 @@ const ALL_TABLES = [
   'refresh_tokens',
   'skill',
   'users',
+  'visit_events',
 ];
 
 /** Items in apps/web/src/content/stack.ts: 4 + 5 + 4 + 3. */
@@ -37,6 +38,15 @@ describe('migrations (real Postgres)', () => {
     expect(await tables()).toEqual(ALL_TABLES);
 
     // Each `down` undoes only its own migration, newest first.
+    await db.dataSource.undoLastMigration();
+    expect(await tables()).toEqual([
+      'availability',
+      'experience',
+      'profile',
+      'refresh_tokens',
+      'skill',
+      'users',
+    ]);
     await db.dataSource.undoLastMigration();
     expect(await tables()).toEqual(['availability', 'refresh_tokens', 'users']);
     await db.dataSource.undoLastMigration();
@@ -237,7 +247,8 @@ describe('migrations (real Postgres)', () => {
       expect(db.query(sql, params)).rejects.toThrow(/check|unique|duplicate/i);
 
     it('drops and recreates the three tables with up -> down -> up', async () => {
-      await db.dataSource.undoLastMigration();
+      await db.dataSource.undoLastMigration(); // visit_events
+      await db.dataSource.undoLastMigration(); // content
       expect(await tables()).toEqual([
         'availability',
         'refresh_tokens',
@@ -350,6 +361,137 @@ describe('migrations (real Postgres)', () => {
           'skill.position',
           'profile.open_to_work',
         ]),
+      );
+    });
+  });
+
+  describe('visit_events', () => {
+    let userId: string;
+    const OTHER_USER_EMAIL = 've-other@example.test';
+    let otherId: string;
+
+    beforeAll(async () => {
+      await db.dataSource.runMigrations();
+      const [user] = await db.query(
+        `INSERT INTO users (email) VALUES ('ve-owner@example.test') RETURNING id`,
+      );
+      userId = String(user?.['id']);
+      const [other] = await db.query(
+        `INSERT INTO users (email) VALUES ($1) RETURNING id`,
+        [OTHER_USER_EMAIL],
+      );
+      otherId = String(other?.['id']);
+    });
+
+    const insert = (
+      kind: string,
+      owner: string = userId,
+      occurredAt = '2026-03-01T10:00:00.123Z',
+    ): Promise<unknown> =>
+      db.query(
+        `INSERT INTO visit_events (id, user_id, kind, occurred_at)
+         VALUES (gen_random_uuid(), $1, $2, $3)`,
+        [owner, kind, occurredAt],
+      );
+
+    it('has exactly the four columns, with no personal data', async () => {
+      const rows = await db.query(
+        `SELECT column_name FROM information_schema.columns
+         WHERE table_schema = $1 AND table_name = 'visit_events' ORDER BY 1`,
+        [db.schema],
+      );
+      expect(rows.map((r) => r['column_name'])).toEqual([
+        'id',
+        'kind',
+        'occurred_at',
+        'user_id',
+      ]);
+    });
+
+    it('indexes (occurred_at DESC, id DESC) and user_id', async () => {
+      const rows = await db.query(
+        `SELECT indexdef FROM pg_indexes
+         WHERE schemaname = $1 AND tablename = 'visit_events'`,
+        [db.schema],
+      );
+      const defs = rows.map((r) => String(r['indexdef']));
+      expect(defs.some((d) => /\(occurred_at DESC, id DESC\)/.test(d))).toBe(
+        true,
+      );
+      expect(defs.some((d) => /\(user_id\)/.test(d))).toBe(true);
+    });
+
+    it('accepts LOGIN and CV_LINK and refuses any other kind', async () => {
+      await insert('LOGIN');
+      await insert('CV_LINK');
+      await expect(insert('OTHER')).rejects.toThrow(/check/i);
+      await expect(insert('login')).rejects.toThrow(/check/i);
+    });
+
+    it('requires an existing user', async () => {
+      await expect(
+        insert('LOGIN', 'ffffffff-ffff-4fff-8fff-ffffffffffff'),
+      ).rejects.toThrow(/foreign key/i);
+    });
+
+    it('keeps millisecond precision', async () => {
+      await insert('LOGIN', userId, '2026-03-02T10:00:00.123Z');
+      const [row] = await db.query(
+        `SELECT occurred_at FROM visit_events WHERE occurred_at = $1`,
+        ['2026-03-02T10:00:00.123Z'],
+      );
+      expect((row?.['occurred_at'] as Date).toISOString()).toBe(
+        '2026-03-02T10:00:00.123Z',
+      );
+    });
+
+    it('deletes the events of a deleted user and only those', async () => {
+      const [gone] = await db.query(
+        `INSERT INTO users (email) VALUES ('ve-gone@example.test') RETURNING id`,
+      );
+      const goneId = String(gone?.['id']);
+      await insert('LOGIN', goneId);
+      await insert('CV_LINK', goneId);
+      await insert('LOGIN', otherId);
+      const count = async (owner: string): Promise<number> =>
+        (
+          await db.query('SELECT 1 FROM visit_events WHERE user_id = $1', [
+            owner,
+          ])
+        ).length;
+      expect(await count(goneId)).toBe(2);
+      await db.query('DELETE FROM users WHERE id = $1', [goneId]);
+      expect(await count(goneId)).toBe(0);
+      expect(await count(otherId)).toBe(1);
+    });
+
+    it('down drops only visit_events', async () => {
+      await db.dataSource.undoLastMigration();
+      expect(await tables()).toEqual([
+        'availability',
+        'experience',
+        'profile',
+        'refresh_tokens',
+        'skill',
+        'users',
+      ]);
+      await db.dataSource.runMigrations();
+      expect(await tables()).toEqual(ALL_TABLES);
+    });
+
+    it('documents the table and its non-obvious columns', async () => {
+      const rows = await db.query(
+        `SELECT a.attname AS column_name
+         FROM pg_description d
+         JOIN pg_class c ON c.oid = d.objoid
+         JOIN pg_namespace n ON n.oid = c.relnamespace
+         LEFT JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = d.objsubid AND d.objsubid > 0
+         WHERE c.relname = 'visit_events' AND n.nspname = $1`,
+        [db.schema],
+      );
+      const documented = rows.map((r) => r['column_name'] ?? '(table)');
+      expect(documented).toEqual(
+        expect.arrayContaining(['(table)', 'kind', 'occurred_at']),
       );
     });
   });

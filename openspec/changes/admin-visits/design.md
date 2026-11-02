@@ -52,10 +52,12 @@ COMMENT ON TABLE / COLUMN ...  -- sin IP, UA ni correo; retención 180 d; precis
 **SQL del adaptador** (estático, sin ramas):
 
 ```sql
--- append(event, retainFrom)
+-- append(event, retainFrom, PURGE_BATCH = 100 en el dominio)
+-- SKIP LOCKED: appends concurrentes purgan lotes disjuntos sin esperarse.
 WITH purged AS (
   DELETE FROM visit_events WHERE id IN (
-    SELECT id FROM visit_events WHERE occurred_at < $5 ORDER BY occurred_at LIMIT 100))
+    SELECT id FROM visit_events WHERE occurred_at < $5
+    ORDER BY occurred_at, id LIMIT $6::int FOR UPDATE SKIP LOCKED))
 INSERT INTO visit_events (id, user_id, kind, occurred_at) VALUES ($1::uuid, $2::uuid, $3, $4)
 
 -- listPage({ retainFrom, kinds, before, limit }): la primera página usa el centinela
