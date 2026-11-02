@@ -1,6 +1,6 @@
 # Apply progress: admin-visits
 
-> Lotes: 1 = PR 1 (U1), hecho. 2 = PR 2 (U2), hecho. 3 = PR 3 (U3), hecho. Queda U4 (PR 4) y el cierre F1–F3.
+> Lotes: 1 = PR 1 (U1), hecho. 2 = PR 2 (U2), hecho. 3 = PR 3 (U3), hecho. 4 = PR 4 (U4), hecho. Queda el cierre F1–F3.
 
 > Modo: Strict TDD. Entrega: 4 PRs, `stacked-to-main`, con `size:exception` en cualquier PR que supere 400 líneas.
 
@@ -159,3 +159,49 @@ Nota de `test:int`: no se corrió la suite completa porque no hay Redis; el job 
 - `InMemoryVisitRepository` recibe `lookup` opcional; sin él, todo evento pertenece a un usuario sin `company` ni `name`.
 - Entorno: durante el cierre `node_modules` quedó incompleto (faltaban binarios de `next` y `eslint-plugin-react`; no por este cambio). Se corrió `npm install --ignore-scripts` y se revirtió el cambio de una línea que hizo a `package-lock.json` (`@nestjs/platform-express` `^12.3.2` -> `12.3.2`, desajuste previo entre `package.json` y el lockfile). Conviene revisar ese desajuste aparte.
 - Las tareas C1–C3 (revisión de contexto fresco, `gitleaks`, `rg` final) quedan para el orquestador antes de abrir el PR.
+
+## Lote 4 — PR 4 (U4: `ListVisits`, controlador y e2e admin)
+
+Tareas completadas: 4.1–4.8 (8 de 8 de U4). Pendiente: cierre del cambio F1–F3. `size:exception`: 605 líneas medidas (569 inserciones + 36 borrados en archivos rastreados y nuevos; sin lockfile ni `openspec/`), por encima del pronóstico de 280–360. El e2e de admin (299) y el spec de `ListVisits` (143) explican la mayor parte.
+
+### TDD Cycle Evidence
+
+| Tarea | RED | GREEN | REFACTOR |
+|-------|-----|-------|----------|
+| 4.1 | `list-visits.use-case.spec.ts` contra un stub con la firma correcta (`execute` devuelve página vacía con `limit: 0`): 21 de 21 fallan en ejecución (`Expected: 5, Received: 0`; `Received promise resolved instead of rejected`) | 21 pasan con `list-visits.use-case.ts` (`PageLimit`, `parseKindFilter`, `VisitCursor.parseOrThrow`, `limit + 1`, `retainFrom(clock.now())`); `admin.module.ts` importa `VisitsModule`, que ahora exporta también `VISIT_REPOSITORY` | — |
+| 4.2–4.4, 4.6 | `admin.e2e-spec.ts` con un controlador stub (`{items: [], next: null}`, sin leer la query): 27 de 36 fallan en ejecución (400 esperado, 200 recibido; forma, orden, `next`) | 36 pasan con el controlador real (`@Query` limit/cursor/kind, DTO como interfaces, `next` de A12, `@ApiExcludeController` conservado). `no-store` en 200/400/401/403 y Swagger sin `/api/v1/admin` quedan en el mismo archivo | — |
+| 4.5 | Sin RED propio: las celdas (400 con `limit`/`kind`/`cursor`, 401, 503 de ADMIN con Postgres caído y lectura tras recuperación) se añadieron sobre código ya cableado; su capacidad de fallar se muestra en 4.8 | `error-contract.e2e-spec.ts` (+17), `postgres-down.e2e-spec.ts` (+33) | — |
+| 4.7 | Sin cambio de código en `apps/web`. `npm test -w apps/web`: 90 suites, 1395 tests, verde. Mutación: el mock de `/api/v1/admin/visits` responde 200 con `[]`: falla `mock/index.test.ts` (1 fallo); revertida, `git status` limpio en `apps/web` | — | — |
+| 4.8 | Mutaciones temporales, todas revertidas y comparadas con copias: quitar `@Roles('ADMIN')` (3 e2e: el 403 del RECRUITER, `no-store` en 403 y la fuga de errores); `next` sin `kind` (1 e2e); `limit + 1` -> `limit` (4 e2e, 2 unit); sin `slice` (3 e2e, 1 unit); `retainFrom` fijo en epoch (1 e2e, 2 unit); ignorar `kind` (1 e2e, 2 unit); ignorar el cursor (2 e2e, 1 unit) | Verde tras revertir | — |
+
+### Resultados finales (CIERRE C2)
+
+| Chequeo | Resultado |
+|---------|-----------|
+| `npm run lint` (raíz) | salida 0 |
+| `npm run typecheck` (raíz) | salida 0 |
+| `npm test` (raíz) | api 64 suites / 726 tests; web 90 suites / 1395 tests; salida 0 |
+| `npm run test:e2e` | 12 suites, 233 tests; salida 0 |
+| `npm run build` (raíz) | salida 0 |
+| `npm run lint:boundaries` (raíz) | sin FAIL; salida 0 |
+| `npm run test:cov -w apps/api` | 64 suites, 726 tests; 100 % líneas / 95,26 % ramas |
+| `npx prettier --check .` | salida 0 |
+| `test:int` | no se corrió: U4 no cambia SQL ni migraciones (los int de U1/U3 cubren `listPage`) |
+
+### Archivos
+
+- Creados: `src/admin/infrastructure/http/dto/visits-page.dto.ts`.
+- Modificados: `src/admin/{admin.module,application/list-visits.use-case(.spec),infrastructure/http/admin-visits.controller}.ts`, `src/visits/visits.module.ts` (exporta `VISIT_REPOSITORY`), `test/{admin,error-contract,postgres-down}.e2e-spec.ts`.
+
+### Desviaciones y notas
+
+- 4.5: sin RED previo (ver tabla); la prueba de que las celdas pueden fallar es la mutación de 4.8 y el e2e de admin.
+- 4.6: no hizo falta cambiar `no-store.spec.ts` (ya incluye `/api/v1/admin/visits`); la cabecera se comprueba en el e2e de admin para 200/400/401/403 y en `postgres-down` para 503.
+- `ListVisits.execute` devuelve `{items, limit, kind, nextCursor}` (como el design §4); el controlador arma `next`.
+- Orden de validación: `limit`, `kind`, `cursor`; el mensaje de `InvalidInput` es fijo y no repite el valor.
+- Las tareas C1–C3 y F1–F3 (revisión de contexto fresco, `gitleaks`, `rg` final, verify) quedan para el orquestador.
+
+### Ajustes tras la revisión de contexto fresco (lote 4)
+
+- El e2e "keeps limit and kind" ahora siembra LOGIN y CV_LINK intercalados, pide `limit=2&kind=LOGIN`, sigue `next` y comprueba que la segunda página son solo LOGIN (ids 5 y 7). Mutaciones (revertidas, diff limpio): `next` sin `kind` y "kind ignorado solo en páginas con cursor" hacen fallar ese test (1 fallo cada una).
+- El test de fugas ancla la regex a nombres de clave JSON entre comillas (`"email"`, `"ip"`, `"userAgent"`, `"userId"`, `"user_id"`...) más los valores sembrados.

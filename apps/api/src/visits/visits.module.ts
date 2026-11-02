@@ -17,6 +17,6 @@ import { TypeOrmVisitRepository } from './infrastructure/persistence/typeorm-vis
     RecordVisit,
     { provide: VISIT_RECORDER, useExisting: RecordVisit },
   ],
-  exports: [VISIT_RECORDER],
+  exports: [VISIT_RECORDER, VISIT_REPOSITORY],
 })
 export class VisitsModule {}

@@ -110,6 +110,23 @@ describe('API error contract', () => {
       expectContract(res, 400, 'INVALID_INPUT');
     });
 
+    it.each(['limit=0', 'kind=OTHER', 'cursor=no-such-secret'])(
+      '400 INVALID_INPUT: admin visits with %s',
+      async (qs) => {
+        const cookie = await t.login({ role: 'ADMIN' });
+        const res = await request(t.server())
+          .get(`/api/v1/admin/visits?${qs}`)
+          .set('Cookie', cookie);
+        expectContract(res, 400, 'INVALID_INPUT');
+        expect(JSON.stringify(res.body)).not.toMatch(/OTHER|no-such-secret/);
+      },
+    );
+
+    it('401 UNAUTHENTICATED: admin visits without cookies', async () => {
+      const res = await request(t.server()).get('/api/v1/admin/visits');
+      expectContract(res, 401, 'UNAUTHENTICATED');
+    });
+
     it('401 UNAUTHENTICATED: no cookies', async () => {
       const res = await request(t.server()).get('/api/v1/me');
       expectContract(res, 401, 'UNAUTHENTICATED');
