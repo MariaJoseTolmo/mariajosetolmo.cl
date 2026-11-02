@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ExperienceCursor } from '../domain/experience-cursor';
 import type { ExperienceEntry } from '../domain/experience-entry';
-import { PageLimit } from '../domain/page-limit';
+import { PageLimit } from '../../shared/domain/page-limit';
 import {
   CONTENT_REPOSITORY,
   type ContentRepository,

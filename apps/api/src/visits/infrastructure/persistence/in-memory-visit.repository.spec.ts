@@ -1,4 +1,5 @@
 import type { VisitEvent } from '../../domain/visit-event';
+import { describeVisitRepositoryContract } from '../../../../test/support/visit-repository.contract';
 import { InMemoryVisitRepository } from './in-memory-visit.repository';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -69,5 +70,30 @@ describe('InMemoryVisitRepository.append', () => {
     await repo.append(event('theirs', NOW, 'user-2'), RETAIN_FROM);
     await repo.append(event('mine-2', NOW, 'user-1'), RETAIN_FROM);
     expect(repo.all().map((e) => e.id)).toEqual(['mine', 'theirs', 'mine-2']);
+  });
+});
+
+describeVisitRepositoryContract('InMemoryVisitRepository', () => {
+  const users = new Map<
+    string,
+    { company: string | null; name: string | null }
+  >();
+  const repo = new InMemoryVisitRepository((id) => users.get(id) ?? null);
+  let next = 0;
+  return Promise.resolve({
+    repo,
+    addUser: (profile) => {
+      next += 1;
+      users.set(`user-${next}`, profile);
+      return Promise.resolve(`user-${next}`);
+    },
+    removeUser: (userId) => {
+      users.delete(userId);
+      return Promise.resolve();
+    },
+    seed: (e) => {
+      repo.seed(e);
+      return Promise.resolve();
+    },
   });
 });

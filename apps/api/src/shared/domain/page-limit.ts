@@ -1,4 +1,4 @@
-import { InvalidInput } from '../../shared/domain/errors';
+import { InvalidInput } from './errors';
 
 export const DEFAULT_PAGE_LIMIT = 5;
 const MIN = 1;

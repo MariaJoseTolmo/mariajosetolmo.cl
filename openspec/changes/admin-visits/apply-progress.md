@@ -1,6 +1,6 @@
 # Apply progress: admin-visits
 
-> Lotes: 1 = PR 1 (U1), hecho. 2 = PR 2 (U2), hecho. Quedan U3 y U4 (PRs 3 y 4) y el cierre F1–F3.
+> Lotes: 1 = PR 1 (U1), hecho. 2 = PR 2 (U2), hecho. 3 = PR 3 (U3), hecho. Queda U4 (PR 4) y el cierre F1–F3.
 
 > Modo: Strict TDD. Entrega: 4 PRs, `stacked-to-main`, con `size:exception` en cualquier PR que supere 400 líneas.
 
@@ -113,3 +113,49 @@ Tareas completadas: 2.1–2.9 (9 de 9 de U2). Pendientes: U3, U4. `size:exceptio
 | S4 | Comentario en los e2e de verify y CV: el `Error` con `code` es una forma sintética para la prueba de datos personales | — |
 
 Resultados: `test:cov` 63 suites, 665 tests, 100 % líneas / 95,62 % ramas (salida 0); `test:e2e` 12 suites, 199 tests (0); `lint:boundaries` 0; `eslint` 0; `typecheck` raíz 0; `prettier --check` 0; `build` 0.
+
+## Lote 3 — PR 3 (U3: `VisitCursor`, `PageLimit` compartido y `listPage`)
+
+Tareas completadas: 3.1–3.6 (6 de 6 de U3). Pendientes: U4. `size:exception`: 551 líneas medidas (195 inserciones + 6 borrados en archivos rastreados, más 350 en tres archivos nuevos; sin lockfile ni `openspec/`), por encima del pronóstico de 330–420. La suite de contrato (212) y el spec del cursor (82) explican la mayor parte. 3.1 se quedó en este PR (`git mv` limpio, ~6 líneas).
+
+### TDD Cycle Evidence
+
+| Tarea | RED | GREEN | REFACTOR |
+|-------|-----|-------|----------|
+| 3.1 | Sin RED (refactor puro): `page-limit.spec.ts` movido sigue en verde | `git mv` a `src/shared/domain/`; imports: el spec movido y `list-experience.use-case.ts` (solo había 2 importadores, no 3) | — |
+| 3.2 | `visit-cursor.spec.ts` contra un stub (`parse` -> `null`, `encode` -> `''`): 6 de 29 fallan en ejecución | 29 pasan con `visit-cursor.ts` (`parse`, `parseOrThrow`, `from`, `encode`) | Regex de payload única; se exige `String(epochMs) === digits` (rechaza ceros a la izquierda) y fecha válida (rechaza `8640000000000001`) |
+| 3.3 | Suite compartida `test/support/visit-repository.contract.ts` ejecutada desde `in-memory-visit.repository.spec.ts` contra `listPage` que devuelve `[]`: 11 de 17 fallan en ejecución | 17 pasan con `listPage` in-memory (orden, JOIN con `lookup`, `kinds`, `retainFrom`, keyset) | `isBefore` extraído |
+| 3.4 | Misma suite desde `typeorm-visit.repository.int-spec.ts` contra un stub (`[]`): 11 de 23 fallan | 23 pasan contra Postgres 18.1 real con `listPage` TypeORM (SQL del design §3, centinela `infinity`/`ffff...`) | Constantes `FIRST_PAGE`/`LIST_PAGE` documentadas |
+| 3.5 | Dentro de la suite: precisión de ms en el viaje cursor -> consulta -> cursor (122/123/124 ms) y primera página con instante lejano | Pasa en ambos adaptadores (D-B: `pg` devuelve `Date`; igual se convierte con `new Date(...)`) | — |
+| 3.6 | Mutaciones temporales, todas revertidas (comparadas con copias): quitar `id DESC` (TypeORM: 2 fallos; in-memory invirtiendo el desempate: 2); `<` -> `<=` (TypeORM 3, in-memory 3); quitar el filtro `retainFrom` (TypeORM 5, in-memory 1); in-memory sin omitir usuarios ausentes (1) | Verde tras revertir | — |
+
+Nota: la mutación `JOIN` -> `LEFT JOIN` en TypeORM NO es observable: con `user_id NOT NULL` y la FK `ON DELETE CASCADE`, nunca existe un evento sin usuario en Postgres (la cascada borra antes de que el JOIN decida). Es un mutante equivalente. La omisión se fija en el adaptador in-memory (que no cascada) y el test de la suite comprueba la consecuencia visible en ambos.
+
+### Resultados finales
+
+| Chequeo | Resultado |
+|---------|-----------|
+| `npm run lint` (raíz) | salida 0 |
+| `npm run typecheck` (raíz) | salida 0 |
+| `npm test` (raíz) | api 64 suites / 706 tests; web 90 suites / 1395 tests; salida 0 |
+| `npm run test:e2e` | 12 suites, 199 tests; salida 0 |
+| `npm run build` (raíz) | salida 0 |
+| `npm run lint:boundaries` (raíz) | salida 0 |
+| `npm run test:cov -w apps/api` | 64 suites, 706 tests; 100 % líneas / 94,96 % ramas; salida 0 |
+| `npx prettier --check .` | salida 0 |
+| `test:int` (solo `typeorm-visit` y `migrations`) | 2 suites, 55 tests, contra Postgres 18.1 temporal en 55433, ya detenido (nada escucha) |
+
+Nota de `test:int`: no se corrió la suite completa porque no hay Redis; el job `integration` de CI corre todo contra compose.
+
+### Archivos
+
+- Creados: `src/visits/domain/visit-cursor.ts` (+ spec), `test/support/visit-repository.contract.ts`.
+- Movidos: `content/domain/page-limit(.spec).ts` -> `src/shared/domain/`.
+- Modificados: `content/application/list-experience.use-case.ts`, `visits/application/ports/visit-repository.port.ts` (`listPage`, `VisitPageQuery`), `visits/application/record-visit.service.spec.ts` (el fake del puerto gana `listPage`), `visits/infrastructure/persistence/{in-memory,typeorm}-visit.repository.ts`, `in-memory-visit.repository.spec.ts`, `test/integration/typeorm-visit.repository.int-spec.ts`, `test/support/test-app.ts` (el in-memory lee `users` para `company`/`name`).
+
+### Desviaciones y notas
+
+- `VisitCursor.parseOrThrow` (no estaba en el contrato del design §4) lanza `InvalidInput('cursor is invalid')`; U4 lo usa cuando llega `cursor`. `parse` sigue devolviendo `null`.
+- `InMemoryVisitRepository` recibe `lookup` opcional; sin él, todo evento pertenece a un usuario sin `company` ni `name`.
+- Entorno: durante el cierre `node_modules` quedó incompleto (faltaban binarios de `next` y `eslint-plugin-react`; no por este cambio). Se corrió `npm install --ignore-scripts` y se revirtió el cambio de una línea que hizo a `package-lock.json` (`@nestjs/platform-express` `^12.3.2` -> `12.3.2`, desajuste previo entre `package.json` y el lockfile). Conviene revisar ese desajuste aparte.
+- Las tareas C1–C3 (revisión de contexto fresco, `gitleaks`, `rg` final) quedan para el orquestador antes de abrir el PR.

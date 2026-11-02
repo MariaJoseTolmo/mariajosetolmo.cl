@@ -75,12 +75,12 @@ Reversión: `git revert` en orden inverso (U4 devuelve el stub; U2 deja de regis
 
 ## U3 — Cursor, `PageLimit` compartido y `listPage` (PR 3)
 
-- [ ] 3.1 `git mv` `content/domain/page-limit(.spec).ts` -> `src/shared/domain/page-limit(.spec).ts` y actualizar los 3 imports de `content` (A8); el spec movido sigue en verde (refactor puro, sin RED). Si C1 anticipa > 400, este paso puede salir en un PR previo.
-- [ ] 3.2 RED `src/visits/domain/visit-cursor.spec.ts` (`it.each`): round-trip; empate de instante; basura, `%%%`, vacío, base64 no canónico, uuid en mayúsculas, `epochMs` enorme o negativo, no entero, arreglo, largo > 96 -> `parse` devuelve `null`; el mensaje de `InvalidInput` no eco -> GREEN `visit-cursor.ts` (A7).
-- [ ] 3.3 RED suite compartida `test/support/visit-repository.contract.ts` ejecutada desde `in-memory-visit.repository.spec.ts`: orden `occurredAt DESC, id DESC`; paginación de 7 eventos con 3 empatados, `limit=2`, sin omitir ni repetir; `limit+1` filas; filtro `kinds`; excluye `< retainFrom` aunque no se purgue (D-C); omite eventos sin usuario -> GREEN `listPage` in-memory.
-- [ ] 3.4 RED `test/integration/typeorm-visit.repository.int-spec.ts` corre la misma suite contra Postgres, más `company`/`name` nulos y la cascada -> GREEN `listPage` TypeORM (SQL del design §3, centinela `infinity`/`ffff...`).
-- [ ] 3.5 RED en la suite: `occurredAt` conserva precisión de milisegundo en el viaje cursor -> SQL -> cursor (D-B).
-- [ ] 3.6 Mutación temporal: quitar `id DESC` del `ORDER BY` y cambiar `<` por `<=` en el keyset; ver RED en 3.3/3.4 y revertir. CIERRE (PR 3; `test:int` exportando `DATABASE_URL`/`REDIS_URL`).
+- [x] 3.1 `git mv` `content/domain/page-limit(.spec).ts` -> `src/shared/domain/page-limit(.spec).ts` y actualizar los 3 imports de `content` (A8); el spec movido sigue en verde (refactor puro, sin RED). Si C1 anticipa > 400, este paso puede salir en un PR previo.
+- [x] 3.2 RED `src/visits/domain/visit-cursor.spec.ts` (`it.each`): round-trip; empate de instante; basura, `%%%`, vacío, base64 no canónico, uuid en mayúsculas, `epochMs` enorme o negativo, no entero, arreglo, largo > 96 -> `parse` devuelve `null`; el mensaje de `InvalidInput` no eco -> GREEN `visit-cursor.ts` (A7).
+- [x] 3.3 RED suite compartida `test/support/visit-repository.contract.ts` ejecutada desde `in-memory-visit.repository.spec.ts`: orden `occurredAt DESC, id DESC`; paginación de 7 eventos con 3 empatados, `limit=2`, sin omitir ni repetir; `limit+1` filas; filtro `kinds`; excluye `< retainFrom` aunque no se purgue (D-C); omite eventos sin usuario -> GREEN `listPage` in-memory.
+- [x] 3.4 RED `test/integration/typeorm-visit.repository.int-spec.ts` corre la misma suite contra Postgres, más `company`/`name` nulos y la cascada -> GREEN `listPage` TypeORM (SQL del design §3, centinela `infinity`/`ffff...`).
+- [x] 3.5 RED en la suite: `occurredAt` conserva precisión de milisegundo en el viaje cursor -> SQL -> cursor (D-B).
+- [x] 3.6 Mutación temporal: quitar `id DESC` del `ORDER BY` y cambiar `<` por `<=` en el keyset; ver RED en 3.3/3.4 y revertir. CIERRE (PR 3; `test:int` exportando `DATABASE_URL`/`REDIS_URL`).
 
 ## U4 — `ListVisits`, controlador y e2e (PR 4)
 

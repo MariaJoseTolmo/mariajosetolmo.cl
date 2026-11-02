@@ -1,4 +1,4 @@
-import { InvalidInput } from '../../shared/domain/errors';
+import { InvalidInput } from './errors';
 import { PageLimit } from './page-limit';
 
 describe('PageLimit', () => {
