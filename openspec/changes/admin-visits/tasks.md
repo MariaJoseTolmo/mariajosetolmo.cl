@@ -52,14 +52,14 @@ Reversión: `git revert` en orden inverso (U4 devuelve el stub; U2 deja de regis
 
 ## U1 — Esquema, dominio base y `append` (PR 1)
 
-- [ ] 1.1 RED `src/visits/domain/visit-kind.spec.ts` (`it.each`): `VISIT_KINDS` = `['LOGIN','CV_LINK']`; `parseKindFilter`: `undefined` -> `null`; `LOGIN`/`CV_LINK` -> kind; arreglo, vacío, `login`, `OTHER` -> `InvalidInput` sin eco -> GREEN `visit-kind.ts` (A9).
-- [ ] 1.2 RED `visit-retention.spec.ts`: `RETENTION_DAYS` 180; `retainFrom(now)` = now − 180 d; eventos de 179, 180 y 181 días: solo el de 181 queda fuera (borde conservado) -> GREEN `visit-retention.ts` y `visit-event.ts` (`VisitEvent`).
-- [ ] 1.3 Puertos `src/visits/application/ports/{visit-recorder,visit-repository}.port.ts` con tokens `VISIT_RECORDER`/`VISIT_REPOSITORY` y `VisitRow` (solo tipos; sin RED propio, los cubren 1.4–1.6).
-- [ ] 1.4 RED `test/integration/migrations.int-spec.ts` (extender, `openIsolatedDatabase()`): tras `up` existe `visit_events` con los dos índices; `CHECK` rechaza `kind='OTHER'` (error de Postgres, aserción en ejecución); borrar el usuario borra sus eventos y no los de otro; `down` borra solo `visit_events` -> GREEN `src/shared/infrastructure/persistence/migrations/1792886400000-visit-events.ts` (SQL plano, una sentencia por `query`) + `index.ts`.
-- [ ] 1.5 RED `src/visits/infrastructure/persistence/in-memory-visit.repository.spec.ts`: `append` guarda el evento con id y `occurredAt` exactos; purga los de `occurredAt < retainFrom`, máximo 100 por escritura, conserva el borde; no toca a otros -> GREEN `in-memory-visit.repository.ts` (recibe `lookup(userId)`).
-- [ ] 1.6 RED `test/integration/typeorm-visit.repository.int-spec.ts`: `append` inserta; purga acotada a 100 filas (105 vencidas -> quedan 5 + el nuevo); borde de 180 d conservado; una sola sentencia (CTE); `kind` inválido rechazado -> GREEN `typeorm-visit.repository.ts` (SQL del design §3).
-- [ ] 1.6b Cada test de purga/borde se muestra capaz de fallar: cambiar `<` por `<=` y `LIMIT 100` por `LIMIT 1000` en el adaptador, ver el RED y revertir.
-- [ ] 1.7 REFACTOR: `new Date(row.occurred_at)` documentado (D-B); sin `visits.module` todavía. CIERRE (PR 1).
+- [x] 1.1 RED `src/visits/domain/visit-kind.spec.ts` (`it.each`): `VISIT_KINDS` = `['LOGIN','CV_LINK']`; `parseKindFilter`: `undefined` -> `null`; `LOGIN`/`CV_LINK` -> kind; arreglo, vacío, `login`, `OTHER` -> `InvalidInput` sin eco -> GREEN `visit-kind.ts` (A9).
+- [x] 1.2 RED `visit-retention.spec.ts`: `RETENTION_DAYS` 180; `retainFrom(now)` = now − 180 d; eventos de 179, 180 y 181 días: solo el de 181 queda fuera (borde conservado) -> GREEN `visit-retention.ts` y `visit-event.ts` (`VisitEvent`).
+- [x] 1.3 Puertos `src/visits/application/ports/{visit-recorder,visit-repository}.port.ts` con tokens `VISIT_RECORDER`/`VISIT_REPOSITORY` y `VisitRow` (solo tipos; sin RED propio, los cubren 1.4–1.6).
+- [x] 1.4 RED `test/integration/migrations.int-spec.ts` (extender, `openIsolatedDatabase()`): tras `up` existe `visit_events` con los dos índices; `CHECK` rechaza `kind='OTHER'` (error de Postgres, aserción en ejecución); borrar el usuario borra sus eventos y no los de otro; `down` borra solo `visit_events` -> GREEN `src/shared/infrastructure/persistence/migrations/1792886400000-visit-events.ts` (SQL plano, una sentencia por `query`) + `index.ts`.
+- [x] 1.5 RED `src/visits/infrastructure/persistence/in-memory-visit.repository.spec.ts`: `append` guarda el evento con id y `occurredAt` exactos; purga los de `occurredAt < retainFrom`, máximo 100 por escritura, conserva el borde; no toca a otros -> GREEN `in-memory-visit.repository.ts` (recibe `lookup(userId)`).
+- [x] 1.6 RED `test/integration/typeorm-visit.repository.int-spec.ts`: `append` inserta; purga acotada a 100 filas (105 vencidas -> quedan 5 + el nuevo); borde de 180 d conservado; una sola sentencia (CTE); `kind` inválido rechazado -> GREEN `typeorm-visit.repository.ts` (SQL del design §3).
+- [x] 1.6b Cada test de purga/borde se muestra capaz de fallar: cambiar `<` por `<=` y `LIMIT 100` por `LIMIT 1000` en el adaptador, ver el RED y revertir.
+- [x] 1.7 REFACTOR: `new Date(row.occurred_at)` documentado (D-B); sin `visits.module` todavía. CIERRE (PR 1).
 
 ## U2 — `RecordVisit` y registro en `auth` y `cv` (PR 2)
 
