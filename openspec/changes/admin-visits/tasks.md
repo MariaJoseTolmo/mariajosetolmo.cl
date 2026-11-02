@@ -18,12 +18,12 @@ Cifras del design §7 (incluyen tests e inflación de Strict TDD). Líneas `addi
 | Estrategia de entrega | ask-on-risk |
 | Estrategia de cadena | stacked-to-main |
 
-Decision needed before apply: Yes
+Decision needed before apply: No (resuelta: 4 PRs con size:exception donde haga falta)
 Chained PRs recommended: Yes
 Chain strategy: stacked-to-main
 400-line budget risk: Medium
 
-Decisión pendiente para la usuaria: confirmar los 4 PRs; si U3 supera 400 al contar (C1), `size:exception` puntual o mover el movimiento de `PageLimit` (3.1) a un PR previo trivial. No se parte la lógica del cursor.
+**Decisión de la usuaria (resuelta antes de apply):** 4 PRs (U1–U4), `stacked-to-main`, con `size:exception` en cualquier PR que supere 400 líneas al contar (C1). `PageLimit` se mueve dentro de U3. No se parte la lógica del cursor.
 
 ### Unidades de trabajo (base = `main` tras mergear la anterior)
 
