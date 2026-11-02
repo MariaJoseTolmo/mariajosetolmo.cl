@@ -25,6 +25,7 @@ import { RedisRateLimiter } from './infrastructure/redis/redis-rate-limiter';
 import { REDIS_CLIENT } from '../shared/infrastructure/redis/redis-client.factory';
 import type { Redis } from 'ioredis';
 import { IdentityModule } from '../identity/identity.module';
+import { VisitsModule } from '../visits/visits.module';
 import { REFRESH_TOKEN_REPOSITORY } from './application/ports/refresh-token-repository.port';
 import { Logout } from './application/logout.use-case';
 import {
@@ -48,7 +49,7 @@ import { JoseAccessTokenService } from './infrastructure/jose/jose-access-token.
 const ACCESS_TOKEN_SERVICE = Symbol('ACCESS_TOKEN_SERVICE');
 
 @Module({
-  imports: [IdentityModule],
+  imports: [IdentityModule, VisitsModule],
   controllers: [AuthController, JwksController],
   providers: [
     {

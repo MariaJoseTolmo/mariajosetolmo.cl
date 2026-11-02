@@ -223,6 +223,57 @@ describe('Postgres unreachable at boot', () => {
     });
   });
 
+  describe('GET /api/v1/cv (visit recording is best effort)', () => {
+    it('answers 200 while Postgres is down: the event is lost, the link is served', async () => {
+      const cookie = await t.login();
+      const res = await request(t.server())
+        .get('/api/v1/cv')
+        .set('Cookie', cookie);
+      expect(res.status).toBe(200);
+      expect(Object.keys(res.body as object).sort()).toEqual([
+        'expiresAt',
+        'url',
+      ]);
+      expect(t.logger.errors).toEqual([
+        'visit recording failed: InfrastructureUnavailable INFRASTRUCTURE_UNAVAILABLE',
+      ]);
+      expect(JSON.stringify(t.logger.errors)).not.toMatch(/10\.0\.0\.9|5432/);
+      expect(
+        db.statements.some((s) => s.sql.includes('INSERT INTO visit_events')),
+      ).toBe(false);
+    });
+
+    it('writes the CV_LINK event through the DataSource once Postgres is back', async () => {
+      db.up = true;
+      const cookie = await t.login({ id: 'user-5' });
+      await request(t.server())
+        .get('/api/v1/cv')
+        .set('Cookie', cookie)
+        .expect(200);
+      const inserts = db.statements.filter((s) =>
+        s.sql.includes('INSERT INTO visit_events'),
+      );
+      expect(inserts).toHaveLength(1);
+      expect(inserts[0]?.params).toContain('CV_LINK');
+      expect(inserts[0]?.params).toContain('user-5');
+      expect(t.logger.errors).toEqual([]);
+    });
+
+    it('answers 200 within the cap when the connection hangs', async () => {
+      db.initialize = () => new Promise<FlakyDataSource>(() => undefined);
+      const cookie = await t.login();
+      const started = Date.now();
+      await request(t.server())
+        .get('/api/v1/cv')
+        .set('Cookie', cookie)
+        .expect(200);
+      const elapsed = Date.now() - started;
+      expect(elapsed).toBeGreaterThanOrEqual(900);
+      expect(elapsed).toBeLessThan(4000);
+      expect(t.logger.warnings).toEqual(['visit recording timed out']);
+    });
+  });
+
   it('answers profile 503 when the profile row is missing', async () => {
     db.up = true;
     db.profileRow = null;

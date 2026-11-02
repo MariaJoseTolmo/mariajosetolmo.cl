@@ -17,6 +17,10 @@ import {
 } from '../../shared/application/ports/random-source.port';
 import { RateLimited } from '../../shared/domain/errors';
 import { sha256Hex } from '../../shared/domain/hash';
+import {
+  VISIT_RECORDER,
+  type VisitRecorder,
+} from '../../visits/application/ports/visit-recorder.port';
 import { InvalidMagicLink } from '../domain/auth-errors';
 import { MagicLinkToken } from '../domain/magic-link-token';
 import { generateOpaqueToken } from '../domain/opaque-token';
@@ -67,6 +71,7 @@ export class VerifyMagicLink {
     @Inject(ID_GENERATOR) private readonly ids: IdGenerator,
     @Inject(RANDOM_SOURCE) private readonly random: RandomSource,
     @Inject(CLOCK) private readonly clock: Clock,
+    @Inject(VISIT_RECORDER) private readonly visits: VisitRecorder,
     @Inject(VERIFY_MAGIC_LINK_OPTIONS)
     private readonly options: VerifyMagicLinkOptions,
   ) {}
@@ -108,6 +113,8 @@ export class VerifyMagicLink {
       { sub: user.id, role: user.role },
       now,
     );
+    // Only a session that exists counts as a login; recording never fails it.
+    await this.visits.record({ userId: user.id, kind: 'LOGIN' });
     return { accessJwt, refreshToken, refreshExpiresAt };
   }
 }

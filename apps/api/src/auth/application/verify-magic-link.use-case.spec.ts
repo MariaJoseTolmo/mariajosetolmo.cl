@@ -23,6 +23,8 @@ import type {
 } from './ports/magic-link-store.port';
 import type { RateLimiter } from './ports/rate-limiter.port';
 import type { UserRepository } from '../../identity/application/ports/user-repository.port';
+import type { VisitRecorder } from '../../visits/application/ports/visit-recorder.port';
+import type { VisitKind } from '../../visits/domain/visit-kind';
 import {
   VerifyMagicLink,
   type VerifyMagicLinkOptions,
@@ -30,7 +32,20 @@ import {
 
 const NOW = new Date('2026-01-01T00:00:00.000Z');
 
+class FakeRecorder implements VisitRecorder {
+  readonly calls: { userId: string; kind: VisitKind }[] = [];
+  /** Snapshot of what had happened before each record call. */
+  readonly seenIssued: number[] = [];
+  constructor(private readonly issued: () => number) {}
+  record(input: { userId: string; kind: VisitKind }): Promise<void> {
+    this.calls.push(input);
+    this.seenIssued.push(this.issued());
+    return Promise.resolve();
+  }
+}
+
 interface Setup {
+  visits: FakeRecorder;
   useCase: VerifyMagicLink;
   clock: FakeClock;
   store: InMemoryMagicLinkStore;
@@ -55,6 +70,7 @@ function setup(
   const refresh = new InMemoryRefreshTokenRepository();
   const issuer = new FakeAccessTokenIssuer();
   const random = new SequenceRandomSource();
+  const visits = new FakeRecorder(() => issuer.issued.length);
   const useCase = new VerifyMagicLink(
     overrides.limiter ?? new InMemoryRateLimiter(clock),
     overrides.store ?? store,
@@ -64,6 +80,7 @@ function setup(
     new SequenceIdGenerator(),
     random,
     clock,
+    visits,
     {
       adminEmail: 'admin@example.test',
       ipRule: { limit: 20, windowSeconds: 900 },
@@ -72,6 +89,7 @@ function setup(
   );
   const linkRandom = new SequenceRandomSource();
   return {
+    visits,
     useCase,
     clock,
     store,
@@ -181,6 +199,57 @@ describe('VerifyMagicLink', () => {
         await t.issueLink({ email: 'a@example.test', company: 'Otra' }),
       );
       expect(t.users.all()[0]?.company).toBe('Otra');
+    });
+  });
+
+  describe('visit recording', () => {
+    it('records one LOGIN for the user, after the access token is issued', async () => {
+      const t = setup();
+      await verify(t, await t.issueLink({ email: 'a@example.test' }));
+      expect(t.visits.calls).toEqual([
+        { userId: t.users.all()[0]?.id, kind: 'LOGIN' },
+      ]);
+      expect(t.visits.seenIssued).toEqual([1]);
+    });
+
+    it('records once per login', async () => {
+      const t = setup();
+      await verify(t, await t.issueLink({ email: 'a@example.test' }));
+      await verify(t, await t.issueLink({ email: 'a@example.test' }));
+      expect(t.visits.calls).toHaveLength(2);
+    });
+
+    it.each([
+      ['unknown', 'N'.repeat(43)],
+      ['malformed', 'basura'],
+    ])('records nothing for a %s link', async (_label, token) => {
+      const t = setup();
+      await verify(t, token).catch(() => undefined);
+      expect(t.visits.calls).toEqual([]);
+    });
+
+    it('records nothing for an expired link', async () => {
+      const t = setup();
+      const token = await t.issueLink({ email: 'a@example.test' });
+      t.clock.advanceSeconds(900);
+      await verify(t, token).catch(() => undefined);
+      expect(t.visits.calls).toEqual([]);
+    });
+
+    it('records nothing for an already used link', async () => {
+      const t = setup();
+      const token = await t.issueLink({ email: 'a@example.test' });
+      await verify(t, token);
+      await verify(t, token).catch(() => undefined);
+      expect(t.visits.calls).toHaveLength(1);
+    });
+
+    it('records nothing when the per-IP limit refuses the attempt', async () => {
+      const t = setup({ ipRule: { limit: 1, windowSeconds: 900 } });
+      await verify(t, 'G'.repeat(43)).catch(() => undefined);
+      const token = await t.issueLink({ email: 'a@example.test' });
+      await verify(t, token).catch(() => undefined);
+      expect(t.visits.calls).toEqual([]);
     });
   });
 

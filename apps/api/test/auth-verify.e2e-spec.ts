@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { InfrastructureUnavailable } from '../src/shared/domain/errors';
 import { sha256Hex } from '../src/shared/domain/hash';
+import { VISIT_REPOSITORY } from '../src/visits/application/ports/visit-repository.port';
 import { createTestApp, type TestApp } from './support/test-app';
 import { TEST_ORIGIN } from './support/test-config';
 
@@ -270,6 +271,97 @@ describe('POST /api/auth/verify', () => {
       expect([one.status, two.status].sort()).toEqual([204, 400]);
       expect(t.refresh.all()).toHaveLength(1);
       expect(t.users.all()).toHaveLength(1);
+    });
+  });
+
+  describe('visit recording', () => {
+    const throwingRepository = {
+      append: () =>
+        Promise.reject(
+          // Synthetic raw Error with a code, only to check no PII is logged; production
+          // wraps errors in InfrastructureUnavailable (see postgres-down).
+          Object.assign(new Error('boom recruiter@example.test'), {
+            code: '23503',
+          }),
+        ),
+    };
+
+    it('creates one LOGIN event at the clock instant for the verified user', async () => {
+      await open();
+      const res = await verify(await requestLink('recruiter@example.test'));
+      expect(res.status).toBe(204);
+      const [user] = t.users.all();
+      expect(t.visits.all()).toEqual([
+        {
+          id: expect.any(String) as string,
+          userId: user?.id,
+          kind: 'LOGIN',
+          occurredAt: t.clock.now(),
+        },
+      ]);
+    });
+
+    it('creates no event for any of the four unusable links', async () => {
+      await open();
+      const used = await requestLink('used@example.test');
+      await verify(used).expect(204);
+      const expired = await requestLink('late@example.test');
+      t.clock.advanceSeconds(900);
+      const before = t.visits.all().length;
+      for (const token of ['N'.repeat(43), expired, used, 'basura']) {
+        const res = await verify(token);
+        expect(res.status).toBe(400);
+        expect(res.body).toMatchObject({ code: 'INVALID_TOKEN' });
+      }
+      expect(before).toBe(1);
+      expect(t.visits.all()).toHaveLength(1);
+    });
+
+    it('creates no event when requesting a link, and answers every case alike', async () => {
+      await open({
+        config: {
+          rateLimits: {
+            magicLinkIp: { limit: 10, windowSeconds: 900 },
+            magicLinkEmail: { limit: 1, windowSeconds: 900 },
+            verifyIp: { limit: 20, windowSeconds: 900 },
+            refreshIp: { limit: 60, windowSeconds: 900 },
+          },
+        },
+      });
+      await t.login({ email: 'known@example.test', id: 'known-1' });
+      const answers = [
+        await post('/api/auth/magic-link', { email: 'known@example.test' }),
+        await post('/api/auth/magic-link', { email: 'new@example.test' }),
+        // The per-email budget is spent now: still the same answer.
+        await post('/api/auth/magic-link', { email: 'new@example.test' }),
+      ];
+      expect(new Set(answers.map((r) => `${r.status}:${r.text}`)).size).toBe(1);
+      expect(answers[0]?.status).toBe(202);
+      expect(t.visits.all()).toEqual([]);
+    });
+
+    it('answers the same and logs no personal data when the store throws', async () => {
+      await open();
+      const ok = await verify(await requestLink('recruiter@example.test'));
+      await t.close();
+      await open({
+        customize: (builder) =>
+          builder
+            .overrideProvider(VISIT_REPOSITORY)
+            .useValue(throwingRepository),
+      });
+      const token = await requestLink('recruiter@example.test');
+      const res = await verify(token);
+      const shape = (r: request.Response): string[] =>
+        cookiesOf(r).map((c) => c.replace(/^([^=]+)=[^;]*/, '$1=<value>'));
+      expect(res.status).toBe(ok.status);
+      expect(res.text).toBe(ok.text);
+      expect(shape(res)).toEqual(shape(ok));
+      expect(t.logger.errors).toEqual(['visit recording failed: Error 23503']);
+      const logged = JSON.stringify([t.logger.errors, t.logger.warnings]);
+      expect(logged).not.toContain('recruiter@example.test');
+      expect(logged).not.toContain(token);
+      expect(logged).not.toMatch(/https?:\/\//);
     });
   });
 

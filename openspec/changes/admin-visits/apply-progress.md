@@ -1,6 +1,6 @@
 # Apply progress: admin-visits
 
-> Lotes: 1 = PR 1 (U1), hecho. Quedan U2, U3 y U4 (PRs 2, 3 y 4) y el cierre F1–F3.
+> Lotes: 1 = PR 1 (U1), hecho. 2 = PR 2 (U2), hecho. Quedan U3 y U4 (PRs 3 y 4) y el cierre F1–F3.
 
 > Modo: Strict TDD. Entrega: 4 PRs, `stacked-to-main`, con `size:exception` en cualquier PR que supere 400 líneas.
 
@@ -60,3 +60,56 @@ Nota de Postgres: Docker no estaba disponible. Las pruebas de integración corri
 - 1.6: el RED se mostró después del adaptador, con stub temporal (ver tabla).
 - `lint:boundaries` es un script de la raíz, no de `apps/api`.
 - Las tareas de cierre C1–C3 (revisión de contexto fresco, `rg` final) quedan para el orquestador antes de abrir el PR.
+
+## Lote 2 — PR 2 (U2: `RecordVisit` y registro en `auth` y `cv`)
+
+Tareas completadas: 2.1–2.9 (9 de 9 de U2). Pendientes: U3, U4. `size:exception`: 626 líneas medidas (`git diff --stat` con archivos nuevos, sin lockfile; 613 inserciones + 13 borrados), por encima del pronóstico de 300–380; los e2e y los specs explican la mayor parte.
+
+### TDD Cycle Evidence
+
+| Tarea | RED | GREEN | REFACTOR |
+|-------|-----|-------|----------|
+| 2.1 | `record-visit.service.spec.ts` contra un stub con la firma correcta que no hace nada: 5 de 7 fallan en ejecución (`Expected - 11 / Received + 1` en el evento armado, log vacío) | 7 pasan con `record-visit.service.ts` | `RECORD_TIMEOUT_MS` exportado; el `append` se crea dentro del `try` y su rechazo tardío se absorbe |
+| 2.2 | Mismo stub: el caso de timers falsos falla (`Expected: false, Received: true`: resolvía sin esperar ni avisar) | `Promise.race` con timer limpiado en `finally`; `getTimerCount() === 0` en éxito y en fallo | — |
+| 2.3 | Cableado sin RED propio; lo cubren los e2e (ver 2.6–2.8). Mutación: quitar el override de `VISIT_REPOSITORY` en `test-app`: 2 fallos en `cv.e2e` | `visits.module.ts`, `app.module.ts`, `test-app` expone `visits` | — |
+| 2.4 | RED por tipos (permitido por D-D): el spec con la firma nueva `execute({userId})` y el tercer parámetro no compila (`TS2554`) | `get-cv-link.use-case.ts`, `cv.controller.ts` (`@CurrentPrincipal()`), `cv.module.ts` | — |
+| 2.5–2.8 | **Desvío de orden:** el código se escribió junto a su spec y el RED se mostró después por mutación (ver 2.9) | 664 unit y 199 e2e verdes | — |
+| 2.9 | Mutaciones temporales, todas revertidas: sin `catch` (2 fallos unit, 3 e2e); `record` antes de `issue` (3 unit, 3 e2e); sin `record` en verify (3 unit, 3 e2e); sin `record` en cv (2 unit, 3 e2e); `record` antes de `sign` (2 unit; no observable en e2e); sin `clearTimeout` (2 unit); sin tope (el e2e de postgres-down con conexión colgada falla); tope 5000 (1 unit); sin override en `test-app` (2 e2e) | Verde tras revertir | — |
+
+### Resultados finales
+
+| Chequeo | Resultado |
+|---------|-----------|
+| `npm run test:cov -w apps/api` | 63 suites, 664 tests; 100 % líneas / 95,62 % ramas; salida 0 |
+| `npm run test:e2e -w apps/api` | 12 suites, 199 tests; salida 0 |
+| `npm run lint:boundaries` | sin FAIL; salida 0 (`auth` -> `visits/application` permitido, D-E no se activó) |
+| `npx eslint . --max-warnings 0` | salida 0 |
+| `npm run typecheck` (raíz) | salida 0 |
+| `npx prettier --check .` | salida 0 |
+| `npm run build -w apps/api` | salida 0 |
+| `test:int` | no se corrió: U2 no cambia SQL ni migraciones |
+
+### Archivos
+
+- Creados: `src/visits/application/record-visit.service.ts` (+ spec), `src/visits/visits.module.ts`.
+- Modificados: `src/app.module.ts`, `src/auth/{auth.module,application/verify-magic-link.use-case(.spec)}.ts`, `src/cv/{cv.module,application/get-cv-link.use-case(.spec),infrastructure/http/cv.controller}.ts`, `test/support/{test-app,fakes/in-memory-repositories}.ts`, `test/{auth-verify,cv,postgres-down}.e2e-spec.ts`.
+
+### Desviaciones y notas
+
+- 2.5–2.8: el RED se mostró por mutación después de escribir el código (no antes), ver 2.9.
+- El log del fallo es `visit recording failed: <name> <code>` (p. ej. `Error 23503`, `InfrastructureUnavailable INFRASTRUCTURE_UNAVAILABLE`), tal como produce `describeFailure`.
+- Con Postgres caído, `GET /cv` responde 200 y el evento se pierde; con la conexión colgada, responde 200 tras ~1000 ms y avisa `visit recording timed out` (e2e con tiempo real, ~1 s).
+- `RecordVisit` se provee como clase y `VISIT_RECORDER` es un alias (`useExisting`).
+- `GetCvLink.execute` recibe `{ readonly userId: string }`, no el `Principal` completo.
+- Las tareas C1–C3 (revisión de contexto fresco, `gitleaks`, `rg` final) quedan para el orquestador antes de abrir el PR.
+
+### Correcciones tras la revisión de contexto fresco (lote 2)
+
+| Hallazgo | Cambio | Prueba |
+|----------|--------|--------|
+| W1 | Test con timers falsos: `append` rechaza a los 2000 ms, después del tope; con el aviso a los 1000 ms, `logger.errors` vacío y sin `unhandledRejection` | Quitar `append.catch(() => undefined)` NO hace fallar el test: `Promise.race` ya se suscribe a `append`, por lo que la línea es redundante hoy. Se conserva como defensa y el test fija el comportamiento ante un cambio futuro de la carrera |
+| S1 | Techo del e2e de conexión colgada: 4000 ms (piso de 900 ms) | — |
+| S3 | `VisitsModule` exporta solo `VISIT_RECORDER` | e2e verdes (los overrides siguen funcionando) |
+| S4 | Comentario en los e2e de verify y CV: el `Error` con `code` es una forma sintética para la prueba de datos personales | — |
+
+Resultados: `test:cov` 63 suites, 665 tests, 100 % líneas / 95,62 % ramas (salida 0); `test:e2e` 12 suites, 199 tests (0); `lint:boundaries` 0; `eslint` 0; `typecheck` raíz 0; `prettier --check` 0; `build` 0.

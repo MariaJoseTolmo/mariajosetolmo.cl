@@ -43,6 +43,8 @@ import {
   InMemoryUserRepository,
 } from './fakes/in-memory-repositories';
 import { testKeyPair } from './keys';
+import { VISIT_REPOSITORY } from '../../src/visits/application/ports/visit-repository.port';
+import { InMemoryVisitRepository } from '../../src/visits/infrastructure/persistence/in-memory-visit.repository';
 
 export const TEST_KEY_ID = 'test-kid-1';
 export const TEST_ADMIN_EMAIL = 'admin@example.test';
@@ -64,6 +66,8 @@ export interface TestApp {
   /** Seeded with `CONTENT_FIXTURE`; replaced by the real one with `dataSource`. */
   readonly content: InMemoryContentRepository;
   readonly refresh: InMemoryRefreshTokenRepository;
+  /** Visit events; the app uses it unless `options.dataSource` is given. */
+  readonly visits: InMemoryVisitRepository;
   readonly mail: CapturingMailSender;
   readonly logger: CapturingLogger;
   /** The in-memory store; the app uses it unless `options.store` replaces it. */
@@ -112,6 +116,7 @@ export async function createTestApp(
   };
   const users = new InMemoryUserRepository();
   const refresh = new InMemoryRefreshTokenRepository();
+  const visits = new InMemoryVisitRepository();
   const mail = new CapturingMailSender();
   const logger = new CapturingLogger();
   const store = new InMemoryMagicLinkStore(clock);
@@ -147,7 +152,9 @@ export async function createTestApp(
       .overrideProvider(USER_REPOSITORY)
       .useValue(users)
       .overrideProvider(REFRESH_TOKEN_REPOSITORY)
-      .useValue(refresh);
+      .useValue(refresh)
+      .overrideProvider(VISIT_REPOSITORY)
+      .useValue(visits);
   }
   if (options.config) {
     builder = builder
@@ -166,6 +173,7 @@ export async function createTestApp(
     secrets,
     users,
     refresh,
+    visits,
     mail,
     logger,
     store,

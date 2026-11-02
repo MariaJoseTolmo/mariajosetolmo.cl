@@ -63,15 +63,15 @@ Reversión: `git revert` en orden inverso (U4 devuelve el stub; U2 deja de regis
 
 ## U2 — `RecordVisit` y registro en `auth` y `cv` (PR 2)
 
-- [ ] 2.1 RED `src/visits/application/record-visit.service.spec.ts` (fakes de puertos): arma `{id, userId, kind, occurredAt}` con `ID_GENERATOR` y `CLOCK` y llama `append(event, retainFrom(now))`; el repositorio lanza -> resuelve sin error y `logger.error` recibe solo `'visit recording failed: ' + describeFailure(e)`, sin correo ni `userId` -> GREEN `record-visit.service.ts` (A2, A4).
-- [ ] 2.2 RED mismo spec con timers falsos: repositorio que no resuelve -> `record` resuelve a los 1000 ms con `warn`, y el timer se limpia si resuelve antes -> GREEN `Promise.race` (A3).
-- [ ] 2.3 `src/visits/visits.module.ts` (provee y exporta `VISIT_RECORDER`/`VISIT_REPOSITORY`), registrar en `app.module.ts`; `test/support/{test-app,fakes/in-memory-repositories}.ts`: override de `VISIT_REPOSITORY` con el in-memory ligado a `users`, y exponer `visits`. RED: e2e de 2.5 falla en ejecución hasta cablear.
-- [ ] 2.4 RED `src/cv/application/get-cv-link.use-case.spec.ts`: `execute({userId})` llama `record({userId, kind:'CV_LINK'})` una vez después de `signer.sign`, y nunca si `sign` lanza -> GREEN `get-cv-link.use-case.ts` + `cv.controller.ts` con `@CurrentPrincipal()` + `cv.module.ts` (importa `VisitsModule`). Ver D-D.
-- [ ] 2.5 RED `src/auth/application/verify-magic-link.use-case.spec.ts`: `record({userId, kind:'LOGIN'})` una vez tras `issuer.issue`; cero veces en los cuatro fallos (inexistente, vencido, usado, mal formado) -> GREEN `verify-magic-link.use-case.ts` + `auth.module.ts`.
-- [ ] 2.6 RED `test/auth-verify.e2e-spec.ts`: verify OK crea 1 `LOGIN` con el instante del reloj; los 4 fallos -> 400 `INVALID_TOKEN` y 0 eventos; `POST /api/auth/magic-link` no crea eventos para correo registrado, nuevo y con límite agotado, con respuestas idénticas; repositorio que lanza -> misma respuesta y mismas cookies y log sin `recruiter@example.test`, token ni URL -> GREEN.
-- [ ] 2.7 RED `test/cv.e2e-spec.ts`: 3 `GET /cv` -> 3 `CV_LINK`; sin sesión -> 401 y 0 eventos; evento sin URL firmada (`https://cv.example.test/signed?sig=abc` ausente de datos y log); repositorio que lanza -> 200 `{url, expiresAt}` -> GREEN.
-- [ ] 2.8 RED `test/postgres-down.e2e-spec.ts`: `GET /cv` con Postgres caído -> 200 (por el tope, A3) -> GREEN.
-- [ ] 2.9 Mutación temporal: quitar el `catch` de `RecordVisit` y mover `record` antes de `issue`; ver RED en 2.1/2.5/2.6 y revertir. CIERRE (PR 2).
+- [x] 2.1 RED `src/visits/application/record-visit.service.spec.ts` (fakes de puertos): arma `{id, userId, kind, occurredAt}` con `ID_GENERATOR` y `CLOCK` y llama `append(event, retainFrom(now))`; el repositorio lanza -> resuelve sin error y `logger.error` recibe solo `'visit recording failed: ' + describeFailure(e)`, sin correo ni `userId` -> GREEN `record-visit.service.ts` (A2, A4).
+- [x] 2.2 RED mismo spec con timers falsos: repositorio que no resuelve -> `record` resuelve a los 1000 ms con `warn`, y el timer se limpia si resuelve antes -> GREEN `Promise.race` (A3).
+- [x] 2.3 `src/visits/visits.module.ts` (provee y exporta `VISIT_RECORDER`/`VISIT_REPOSITORY`), registrar en `app.module.ts`; `test/support/{test-app,fakes/in-memory-repositories}.ts`: override de `VISIT_REPOSITORY` con el in-memory ligado a `users`, y exponer `visits`. RED: e2e de 2.5 falla en ejecución hasta cablear.
+- [x] 2.4 RED `src/cv/application/get-cv-link.use-case.spec.ts`: `execute({userId})` llama `record({userId, kind:'CV_LINK'})` una vez después de `signer.sign`, y nunca si `sign` lanza -> GREEN `get-cv-link.use-case.ts` + `cv.controller.ts` con `@CurrentPrincipal()` + `cv.module.ts` (importa `VisitsModule`). Ver D-D.
+- [x] 2.5 RED `src/auth/application/verify-magic-link.use-case.spec.ts`: `record({userId, kind:'LOGIN'})` una vez tras `issuer.issue`; cero veces en los cuatro fallos (inexistente, vencido, usado, mal formado) -> GREEN `verify-magic-link.use-case.ts` + `auth.module.ts`.
+- [x] 2.6 RED `test/auth-verify.e2e-spec.ts`: verify OK crea 1 `LOGIN` con el instante del reloj; los 4 fallos -> 400 `INVALID_TOKEN` y 0 eventos; `POST /api/auth/magic-link` no crea eventos para correo registrado, nuevo y con límite agotado, con respuestas idénticas; repositorio que lanza -> misma respuesta y mismas cookies y log sin `recruiter@example.test`, token ni URL -> GREEN.
+- [x] 2.7 RED `test/cv.e2e-spec.ts`: 3 `GET /cv` -> 3 `CV_LINK`; sin sesión -> 401 y 0 eventos; evento sin URL firmada (`https://cv.example.test/signed?sig=abc` ausente de datos y log); repositorio que lanza -> 200 `{url, expiresAt}` -> GREEN.
+- [x] 2.8 RED `test/postgres-down.e2e-spec.ts`: `GET /cv` con Postgres caído -> 200 (por el tope, A3) -> GREEN.
+- [x] 2.9 Mutación temporal: quitar el `catch` de `RecordVisit` y mover `record` antes de `issue`; ver RED en 2.1/2.5/2.6 y revertir. CIERRE (PR 2).
 
 ## U3 — Cursor, `PageLimit` compartido y `listPage` (PR 3)
 
