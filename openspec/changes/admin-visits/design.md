@@ -77,7 +77,7 @@ LIMIT $5::int   -- limit + 1
 export type VisitKind = (typeof VISIT_KINDS)[number];
 export interface VisitEvent { id: string; userId: string; kind: VisitKind; occurredAt: Date }
 export const RETENTION_DAYS = 180; export function retainFrom(now: Date): Date;
-export class VisitCursor { static parse(raw: unknown): VisitCursor | null; static from(e): VisitCursor; encode(): string }
+export class VisitCursor { static parse(raw: unknown): VisitCursor | null; static parseOrThrow(raw: unknown): VisitCursor; static from(e): VisitCursor; encode(): string }
 // visits/application/ports
 export interface VisitRecorder { record(input: { userId: string; kind: VisitKind }): Promise<void> } // nunca rechaza
 export interface VisitRepository {

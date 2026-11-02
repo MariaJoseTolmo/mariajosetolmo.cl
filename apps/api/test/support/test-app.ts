@@ -116,7 +116,11 @@ export async function createTestApp(
   };
   const users = new InMemoryUserRepository();
   const refresh = new InMemoryRefreshTokenRepository();
-  const visits = new InMemoryVisitRepository();
+  // Bound to `users`, like the SQL join: a visit of a removed user is not listed.
+  const visits = new InMemoryVisitRepository((userId) => {
+    const user = users.all().find((candidate) => candidate.id === userId);
+    return user ? { company: user.company, name: user.name } : null;
+  });
   const mail = new CapturingMailSender();
   const logger = new CapturingLogger();
   const store = new InMemoryMagicLinkStore(clock);

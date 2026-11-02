@@ -16,6 +16,22 @@ export interface VisitRepository {
    * older than `retainFrom` (the exact boundary is kept).
    */
   append(event: VisitEvent, retainFrom: Date): Promise<void>;
+
+  /**
+   * One keyset page, newest first by (occurredAt, id) both descending. Returns at
+   * most `limit` rows (the caller asks for the page size plus one to know if
+   * there is a next page). Only events at or after `retainFrom` of the given
+   * `kinds` are listed, strictly before `before` when given (`null` is the first
+   * page). Events whose user no longer exists are left out.
+   */
+  listPage(query: VisitPageQuery): Promise<VisitRow[]>;
+}
+
+export interface VisitPageQuery {
+  readonly retainFrom: Date;
+  readonly kinds: readonly VisitKind[];
+  readonly before: { readonly occurredAt: Date; readonly id: string } | null;
+  readonly limit: number;
 }
 
 export const VISIT_REPOSITORY = Symbol('VISIT_REPOSITORY');

@@ -26,6 +26,7 @@ function setup(repository?: Partial<VisitRepository>): {
       calls.push({ event, retainFrom: from });
       return Promise.resolve();
     },
+    listPage: () => Promise.resolve([]),
     ...repository,
   };
   const service = new RecordVisit(

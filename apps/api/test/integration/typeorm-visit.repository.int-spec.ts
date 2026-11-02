@@ -4,6 +4,7 @@ import { InfrastructureUnavailable } from '../../src/shared/domain/errors';
 import { createDataSource } from '../../src/shared/infrastructure/persistence/data-source.factory';
 import type { VisitEvent } from '../../src/visits/domain/visit-event';
 import { retainFrom } from '../../src/visits/domain/visit-retention';
+import { describeVisitRepositoryContract } from '../support/visit-repository.contract';
 import { databaseUrl } from './support/env';
 import {
   openIsolatedDatabase,
@@ -201,5 +202,42 @@ describe('TypeOrmVisitRepository.append (real Postgres)', () => {
     } finally {
       if (lazy.isInitialized) await lazy.destroy();
     }
+  });
+});
+
+describe('TypeOrmVisitRepository.listPage (real Postgres)', () => {
+  let db: IsolatedDatabase;
+  let repo: TypeOrmVisitRepository;
+  let emails = 0;
+
+  beforeAll(async () => {
+    db = await openIsolatedDatabase();
+    await db.dataSource.runMigrations();
+    repo = new TypeOrmVisitRepository(db.dataSource);
+  });
+  afterAll(() => db.close());
+
+  describeVisitRepositoryContract('TypeOrmVisitRepository', async () => {
+    await db.query('DELETE FROM users'); // cascades to visit_events
+    return {
+      repo,
+      addUser: async (profile) => {
+        emails += 1;
+        const [row] = await db.query(
+          'INSERT INTO users (email, company, name) VALUES ($1, $2, $3) RETURNING id',
+          [`recruiter-${emails}@example.test`, profile.company, profile.name],
+        );
+        return String(row?.['id']);
+      },
+      removeUser: async (userId) => {
+        await db.query('DELETE FROM users WHERE id = $1', [userId]);
+      },
+      seed: async (e) => {
+        await db.query(
+          'INSERT INTO visit_events (id, user_id, kind, occurred_at) VALUES ($1, $2, $3, $4)',
+          [e.id, e.userId, e.kind, e.occurredAt],
+        );
+      },
+    };
   });
 });
