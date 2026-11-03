@@ -274,6 +274,39 @@ describe('Postgres unreachable at boot', () => {
     });
   });
 
+  describe('GET /api/v1/admin/visits', () => {
+    it('answers 503 with a generic no-store body while Postgres is down', async () => {
+      const cookie = await t.login({ role: 'ADMIN' });
+      const res = await request(t.server())
+        .get('/api/v1/admin/visits')
+        .set('Cookie', cookie);
+      expect(res.status).toBe(503);
+      expect(res.headers['cache-control']).toBe('no-store');
+      expect(res.body).toEqual({
+        statusCode: 503,
+        error: 'Service Unavailable',
+        message: 'Service temporarily unavailable',
+        code: 'SERVICE_UNAVAILABLE',
+      });
+      expect(JSON.stringify(res.body)).not.toMatch(
+        /10\.0\.0\.9|ECONNREFUSED|SELECT|visit_events|stack/,
+      );
+    });
+
+    it('reads the page from the database after recovery', async () => {
+      db.up = true;
+      const cookie = await t.login({ role: 'ADMIN' });
+      const res = await request(t.server())
+        .get('/api/v1/admin/visits')
+        .set('Cookie', cookie);
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ items: [], next: null });
+      expect(db.statements.some((s) => /FROM visit_events\b/.test(s.sql))).toBe(
+        true,
+      );
+    });
+  });
+
   it('answers profile 503 when the profile row is missing', async () => {
     db.up = true;
     db.profileRow = null;
